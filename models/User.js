@@ -1,3 +1,4 @@
+// 專案範本 - 使用者資料表，未修改
 import { DataTypes } from 'sequelize'
 // 加密密碼字串用
 import { generateHash } from '#db-helpers/password-hash.js'

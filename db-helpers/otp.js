@@ -1,3 +1,4 @@
+// 專案範本，忘記密碼功能，未修改
 // 資料庫查詢處理函式
 import { generateToken } from '#configs/otp.js'
 

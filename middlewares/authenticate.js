@@ -8,29 +8,32 @@ const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET
 
 // 中介軟體middleware，用於檢查授權(authenticate)
 export default function authenticate(req, res, next) {
-  // const token = req.headers['authorization']
-  const token = req.cookies.accessToken
-  // console.log(token)
+  const authHeader = req.headers['authorization']
+  // const token = req.cookies.accessToken
 
-  // if no token
-  if (!token) {
+  // 檢查 Authorization 標頭是否存在並且格式是否正確
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7) // 去掉 "Bearer "
+
+    // verify的callback會帶有decoded payload(解密後的有效資料)，就是user的資料
+    jsonwebtoken.verify(token, accessTokenSecret, (err, user) => {
+      if (err) {
+        // 如果 token 驗證失敗，返回錯誤訊息
+        return res.json({
+          status: 'error',
+          message: '不合法的存取令牌',
+        })
+      }
+
+      // 如果 token 驗證成功，將用戶資訊加到 req 中並繼續處理請求
+      req.user = user
+      next()
+    })
+  } else {
+    // 如果 Authorization 標頭不存在或格式不正確，返回錯誤訊息
     return res.json({
       status: 'error',
       message: '授權失敗，沒有存取令牌',
     })
   }
-
-  // verify的callback會帶有decoded payload(解密後的有效資料)，就是user的資料
-  jsonwebtoken.verify(token, accessTokenSecret, (err, user) => {
-    if (err) {
-      return res.json({
-        status: 'error',
-        message: '不合法的存取令牌',
-      })
-    }
-
-    // 將user資料加到req中
-    req.user = user
-    next()
-  })
 }

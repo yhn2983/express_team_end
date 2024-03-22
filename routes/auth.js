@@ -11,7 +11,7 @@ import 'dotenv/config.js'
 // 資料庫使用
 import { QueryTypes } from 'sequelize'
 import sequelize from '#configs/db.js'
-const { User } = sequelize.models
+const { Member } = sequelize.models
 
 // 驗証加密密碼字串用
 import { compareHash } from '#db-helpers/password-hash.js'
@@ -22,7 +22,7 @@ const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET
 // 檢查登入狀態用
 router.get('/check', authenticate, async (req, res) => {
   // 查詢資料庫目前的資料
-  const user = await User.findByPk(req.user.id, {
+  const user = await Member.findByPk(req.user.id, {
     raw: true, // 只需要資料表中資料
   })
 
@@ -32,20 +32,20 @@ router.get('/check', authenticate, async (req, res) => {
 })
 
 router.post('/login', async (req, res) => {
-  // 從前端來的資料 req.body = { username:'xxxx', password :'xxxx'}
+  // 從前端來的資料 req.body = { nickname:'xxxx', password :'xxxx'}
   const loginUser = req.body
 
   // 檢查從前端來的資料哪些為必要
-  if (!loginUser.username || !loginUser.password) {
+  if (!loginUser.nickname || !loginUser.password) {
     return res.json({ status: 'fail', data: null })
   }
 
   // 查詢資料庫，是否有這帳號與密碼的使用者資料
   // 方式一: 使用直接查詢
   // const user = await sequelize.query(
-  //   'SELECT * FROM user WHERE username=? LIMIT 1',
+  //   'SELECT * FROM user WHERE nickname=? LIMIT 1',
   //   {
-  //     replacements: [loginUser.username], //代入問號值
+  //     replacements: [loginUser.nickname], //代入問號值
   //     type: QueryTypes.SELECT, //執行為SELECT
   //     plain: true, // 只回傳第一筆資料
   //     raw: true, // 只需要資料表中資料
@@ -54,9 +54,9 @@ router.post('/login', async (req, res) => {
   // )
 
   // 方式二: 使用模型查詢
-  const user = await User.findOne({
+  const user = await Member.findOne({
     where: {
-      username: loginUser.username,
+      nickname: loginUser.nickname,
     },
     raw: true, // 只需要資料表中資料
   })
@@ -80,7 +80,7 @@ router.post('/login', async (req, res) => {
   // 存取令牌(access token)只需要id和username就足夠，其它資料可以再向資料庫查詢
   const returnUser = {
     id: user.id,
-    username: user.username,
+    nickname: user.nickname,
     google_uid: user.google_uid,
     line_uid: user.line_uid,
   }
@@ -90,8 +90,13 @@ router.post('/login', async (req, res) => {
     expiresIn: '3d',
   })
 
+  /*
   // 使用httpOnly cookie來讓瀏覽器端儲存access token
   res.cookie('accessToken', accessToken, { httpOnly: true })
+  */
+
+  // 將 access token 放在 Authorization 標頭中
+  res.set('Authorization', `Bearer ${accessToken}`)
 
   // 傳送access token回應(例如react可以儲存在state中使用)
   res.json({
@@ -101,8 +106,8 @@ router.post('/login', async (req, res) => {
 })
 
 router.post('/logout', authenticate, (req, res) => {
-  // 清除cookie
-  res.clearCookie('accessToken', { httpOnly: true })
+  // // 清除cookie
+  // res.clearCookie('accessToken', { httpOnly: true })
   res.json({ status: 'success', data: null })
 })
 
