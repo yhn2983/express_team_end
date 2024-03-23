@@ -9,7 +9,7 @@ import authenticate from '#middlewares/authenticate.js'
 import 'dotenv/config.js'
 
 // 資料庫使用
-import { QueryTypes } from 'sequelize'
+// import { QueryTypes } from 'sequelize'
 import sequelize from '#configs/db.js'
 const { Member } = sequelize.models
 
@@ -32,11 +32,11 @@ router.get('/check', authenticate, async (req, res) => {
 })
 
 router.post('/login', async (req, res) => {
-  // 從前端來的資料 req.body = { nickname:'xxxx', password :'xxxx'}
+  // 從前端來的資料 req.body = { email:'xxxx', password :'xxxx'}
   const loginUser = req.body
 
   // 檢查從前端來的資料哪些為必要
-  if (!loginUser.nickname || !loginUser.password) {
+  if (!loginUser.email || !loginUser.password) {
     return res.json({ status: 'fail', data: null })
   }
 
@@ -56,7 +56,7 @@ router.post('/login', async (req, res) => {
   // 方式二: 使用模型查詢
   const user = await Member.findOne({
     where: {
-      nickname: loginUser.nickname,
+      email: loginUser.email,
     },
     raw: true, // 只需要資料表中資料
   })
