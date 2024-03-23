@@ -80,9 +80,10 @@ router.post('/login', async (req, res) => {
   // 存取令牌(access token)只需要id和username就足夠，其它資料可以再向資料庫查詢
   const returnUser = {
     id: user.id,
+    email: user.email,
     nickname: user.nickname,
-    google_uid: user.google_uid,
-    line_uid: user.line_uid,
+    // google_uid: user.google_uid,
+    // line_uid: user.line_uid,
   }
 
   // 產生存取令牌(access token)，其中包含會員資料
