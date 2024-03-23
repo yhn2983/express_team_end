@@ -5,6 +5,8 @@ import jsonwebtoken from 'jsonwebtoken'
 // 中介軟體，存取隱私會員資料用
 import authenticate from '#middlewares/authenticate.js'
 
+// import { generateHash } from '#db-helpers/password-hash.js'
+
 // 存取`.env`設定檔案使用
 import 'dotenv/config.js'
 
@@ -110,6 +112,63 @@ router.post('/logout', authenticate, (req, res) => {
   // // 清除cookie
   // res.clearCookie('accessToken', { httpOnly: true })
   res.json({ status: 'success', data: null })
+})
+
+router.post('/register', async (req, res) => {
+  // 從前端來的資料 req.body = { email:'xxxx', password :'xxxx', name: 'xxxx', nickname: 'xxxx', mobile: 'xxxx', birthday: 'xxxx', address: 'xxxx'}
+  const registerUser = req.body
+
+  // 檢查從前端來的資料哪些為必要
+  if (
+    !registerUser.email ||
+    !registerUser.password ||
+    !registerUser.name ||
+    !registerUser.nickname ||
+    !registerUser.mobile ||
+    !registerUser.birthday ||
+    !registerUser.address
+  ) {
+    return res.json({ status: 'fail', data: null })
+  }
+
+  // 查詢資料庫，是否已存在相同的email
+  const user = await Member.findOne({
+    where: {
+      email: registerUser.email,
+    },
+    raw: true, // 只需要資料表中資料
+  })
+
+  // 如果user存在，則回傳錯誤訊息
+  if (user) {
+    return res.json({ status: 'error', message: 'Email已被註冊' })
+  }
+
+  // // 將密碼進行hash處理
+  // const hashedPassword = await generateHash(registerUser.password)
+
+  // 將email和hash後的密碼以及其他資訊，還有設定為0的欄位和預設的photo存入資料庫
+  await Member.create({
+    email: registerUser.email,
+    password: registerUser.password,
+    name: registerUser.name,
+    nickname: registerUser.nickname,
+    mobile: registerUser.mobile,
+    birthday: registerUser.birthday,
+    address: registerUser.address,
+    photo: 'default_photo.jpg', // 預設的photo
+    member_level: 0,
+    level_name: '0',
+    level_desc: '0',
+    carbon_points_got: 0,
+    carbon_points_have: 0,
+  })
+
+  // 回傳成功訊息
+  res.json({
+    status: 'success',
+    message: '註冊成功，請重新登入',
+  })
 })
 
 export default router
