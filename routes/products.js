@@ -235,7 +235,7 @@ router.post('/add', async (req, res) => {
 
   let result
   try {
-    [result] = await db.query(sql, [
+    const [result] = await db.query(sql, [
       req.body.name,
       req.body.email,
       req.body.mobile,
@@ -322,7 +322,10 @@ router.get('/statistics', async (req, res) => {
 
     res.render('products/statistics')
   } catch (ex) {
-    output.error = ex.toString()
+    console.error(ex)
+    res.render('error', {
+      message: '內容似乎出錯了!',
+    })
   }
 })
 
