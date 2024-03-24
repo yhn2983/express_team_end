@@ -27,3 +27,5 @@ Headers加(key Authorization )(value Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 密碼問題，因為常常Member模組再生成時就會加密一次了，故後端加進去時不需要再用了
 
 3.把圖片同步到本機next的imgs裡面了，記得不要上傳到github!!!加上 /public/imgs
+
+4.試著把樣式寫上去
