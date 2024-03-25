@@ -29,3 +29,13 @@ Headers加(key Authorization )(value Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 3.把圖片同步到本機next的imgs裡面了，記得不要上傳到github!!!加上 /public/imgs
 
 4.試著把樣式寫上去
+
+{3/25}
+1.增加前端驗證功能，記得要留紅色提醒的位置，不要讓表單忽大忽小
+
+2.Scss注意事項，雖然next可以直接用scss.module，不過只限於html標籤<button><table><td>...
+所以如果要自訂className的樣式，還是只能每一行都寫，
+大概像 <div className={styles.error}>{error.email}</div>
+
+
+
