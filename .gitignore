@@ -6,6 +6,7 @@ dev.env
 
 routes/ws-chat.js
 routes/ws-draw.js
+views
 
 # dependencies
 /node_modules
