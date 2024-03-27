@@ -8,13 +8,10 @@ const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET
 
 // 中介軟體middleware，用於檢查授權(authenticate)
 export default function authenticate(req, res, next) {
-  const authHeader = req.headers['authorization']
-  // const token = req.cookies.accessToken
+  const token = req.cookies.accessToken
 
-  // 檢查 Authorization 標頭是否存在並且格式是否正確
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7) // 去掉 "Bearer "
-
+  // 如果 token 存在
+  if (token) {
     // verify的callback會帶有decoded payload(解密後的有效資料)，就是user的資料
     jsonwebtoken.verify(token, accessTokenSecret, (err, user) => {
       if (err) {
@@ -30,7 +27,7 @@ export default function authenticate(req, res, next) {
       next()
     })
   } else {
-    // 如果 Authorization 標頭不存在或格式不正確，返回錯誤訊息
+    // 如果 token 不存在，返回錯誤訊息
     return res.json({
       status: 'error',
       message: '授權失敗，沒有存取令牌',

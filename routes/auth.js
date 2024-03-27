@@ -93,13 +93,13 @@ router.post('/login', async (req, res) => {
     expiresIn: '3d',
   })
 
-  /*
   // 使用httpOnly cookie來讓瀏覽器端儲存access token
   res.cookie('accessToken', accessToken, { httpOnly: true })
-  */
 
+  /* localStorage
   // 將 access token 放在 Authorization 標頭中
   res.set('Authorization', `Bearer ${accessToken}`)
+  */
 
   // 傳送access token回應(例如react可以儲存在state中使用)
   res.json({
@@ -109,8 +109,8 @@ router.post('/login', async (req, res) => {
 })
 
 router.post('/logout', authenticate, (req, res) => {
-  // // 清除cookie
-  // res.clearCookie('accessToken', { httpOnly: true })
+  // 清除cookie
+  res.clearCookie('accessToken', { httpOnly: true })
   res.json({ status: 'success', data: null })
 })
 
