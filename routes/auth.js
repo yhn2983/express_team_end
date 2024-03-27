@@ -118,37 +118,42 @@ router.post('/register', async (req, res) => {
   // 從前端來的資料 req.body = { email:'xxxx', password :'xxxx', name: 'xxxx', nickname: 'xxxx', mobile: 'xxxx', birthday: 'xxxx', address: 'xxxx'}
   const registerUser = req.body
 
-  // 檢查從前端來的資料哪些為必要
-  if (
-    !registerUser.email ||
-    !registerUser.password ||
-    !registerUser.name ||
-    !registerUser.nickname ||
-    !registerUser.mobile ||
-    !registerUser.birthday ||
-    !registerUser.address
-  ) {
-    return res.json({ status: 'fail', data: null })
-  }
-
   // 查詢資料庫，是否已存在相同的email
-  const user = await Member.findOne({
+  // where指的的是不可以有相同的email
+  // defaults就新增資料
+  const [user, created] = await Member.findOrCreate({
     where: {
       email: registerUser.email,
     },
-    raw: true, // 只需要資料表中資料
+    defaults: {
+      email: registerUser.email,
+      password: registerUser.password,
+      name: registerUser.name,
+      nickname: registerUser.nickname,
+      mobile: registerUser.mobile,
+      birthday: registerUser.birthday,
+      address: registerUser.address,
+      photo: 'default_photo.jpg', // 預設的photo
+      member_level: 0,
+      level_name: '0',
+      level_desc: '0',
+      carbon_points_got: 0,
+      carbon_points_have: 0,
+    },
   })
 
-  // 如果user存在，則回傳錯誤訊息
-  if (user) {
-    return res.json({ status: 'error', message: 'Email已被註冊' })
+  // 新增失敗 created=false 代表沒有新增成功
+  if (!created) {
+    return res.json({ status: 'error', message: '建立會員失敗' })
   }
 
   // // 將密碼進行hash處理
   // const hashedPassword = await generateHash(registerUser.password)
 
   // 將email和hash後的密碼以及其他資訊，還有設定為0的欄位和預設的photo存入資料庫
-  await Member.create({
+
+  /* 寫在findOrCreate裡面，不需要再寫
+    await Member.create({
     email: registerUser.email,
     password: registerUser.password,
     name: registerUser.name,
@@ -163,12 +168,13 @@ router.post('/register', async (req, res) => {
     carbon_points_got: 0,
     carbon_points_have: 0,
   })
+  */
 
-  // 回傳成功訊息
-  res.json({
-    status: 'success',
-    message: '註冊成功，請重新登入',
-  })
+  // 成功建立會員的回應
+  // 狀態201是建立資料表的標準回應
+  // 如果有必要可以加上location會員建立的url回應在header
+  // res.location(`/api/user/${user.id}`)
+  return res.status(201).json({ status: 'success', data: null })
 })
 
 export default router
