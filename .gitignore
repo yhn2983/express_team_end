@@ -4,6 +4,9 @@
 public/imgs
 dev.env
 
+routes/ws-chat.js
+routes/ws-draw.js
+
 # dependencies
 /node_modules
 /.pnp
