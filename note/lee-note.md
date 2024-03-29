@@ -37,5 +37,25 @@ Headers加(key Authorization )(value Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 所以如果要自訂className的樣式，還是只能每一行都寫，
 大概像 <div className={styles.error}>{error.email}</div>
 
+{3/26~3/29}
+1.註冊跟登入功能優化，完成一鍵填入，記得測試的時候要先把accessToken刪掉(登出)，不然會整個當機
+
+2.實作profile頁面，有把預設資料都帶進去，更改資料的next+express也做完成並測試成功
+
+3.要注意next context 的 checkAuth() 函式跟 express的 check api 使用時機!處理的資料不一樣!
+例如更改資料表單要接收跟傳送的資料跟checkAuth()回傳的資料完全不一樣，所以要自己發api來處理!
+          {   
+            isAuth: true,
+            userData: {
+              id: user.id,
+              email: user.email,
+              nickname: user.nickname,
+            },
+          }
+
+          { name, mobile: newMobile, address }
+
+4.(未完成)上傳大貼照的部分
+
 
 
