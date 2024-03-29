@@ -28,9 +28,12 @@ router.get('/check', authenticate, async (req, res) => {
     raw: true, // 只需要資料表中資料
   })
 
-  // 不回傳密碼值
-  delete user.password
-  return res.json({ status: 'success', data: { user } })
+  if (user) {
+    delete user.password
+    return res.json({ status: 'success', data: { user } })
+  } else {
+    return res.json({ status: 'error', message: '使用者不存在' })
+  }
 })
 
 router.post('/login', async (req, res) => {
@@ -118,6 +121,11 @@ router.post('/register', async (req, res) => {
   // 從前端來的資料 req.body = { email:'xxxx', password :'xxxx', name: 'xxxx', nickname: 'xxxx', mobile: 'xxxx', birthday: 'xxxx', address: 'xxxx'}
   const registerUser = req.body
 
+  // 如果電話號碼的第一個字元是 "0"，則去掉它
+  if (registerUser.mobile.startsWith('0')) {
+    registerUser.mobile = registerUser.mobile.substring(1)
+  }
+
   // 查詢資料庫，是否已存在相同的email
   // where指的的是不可以有相同的email
   // defaults就新增資料
@@ -134,9 +142,9 @@ router.post('/register', async (req, res) => {
       birthday: registerUser.birthday,
       address: registerUser.address,
       photo: 'default_photo.jpg', // 預設的photo
-      member_level: 0,
-      level_name: '0',
-      level_desc: '0',
+      member_level: 1,
+      level_name: 'level 0',
+      level_desc: '等待任務中',
       carbon_points_got: 0,
       carbon_points_have: 0,
     },
