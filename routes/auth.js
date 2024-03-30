@@ -141,7 +141,7 @@ router.post('/register', async (req, res) => {
       mobile: registerUser.mobile,
       birthday: registerUser.birthday,
       address: registerUser.address,
-      photo: 'default_photo.jpg', // 預設的photo
+      photo: 'default.png', // 預設的photo
       member_level: 1,
       level_name: 'level 0',
       level_desc: '等待任務中',
