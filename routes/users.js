@@ -211,6 +211,7 @@ router.put('/:id/password', authenticate, async function (req, res) {
   return res.json({ status: 'success', data: null })
 })
 
+// 已完成
 // PUT - 更新會員資料(排除更新密碼)
 router.put('/:id/profile', authenticate, async function (req, res) {
   const id = getIdParam(req)
@@ -288,5 +289,56 @@ router.delete('/:id', async function (req, res) {
   // 成功
   return res.json({ status: 'success', data: null })
 })
+
+// 更換大頭貼照片
+// 上傳檔案的路由
+router.post(
+  '/upload-avatar-one',
+  authenticate,
+  upload.single('avatar'),
+  async (req, res) => {
+    // 檢查是否有上傳的檔案
+    if (!req.file) {
+      return res.status(400).json({
+        status: false,
+        message: 'No file uploaded',
+      })
+    }
+
+    // 更新資料庫中的圖片名稱
+    try {
+      const [numberOfAffectedRows] = await Member.update(
+        { photo: req.file.filename },
+        {
+          where: { id: req.user.id },
+        }
+      )
+      // check if the update was successful
+      if (numberOfAffectedRows === 0) {
+        return res.status(400).json({
+          status: false,
+          message: 'Could not update photo',
+        })
+      }
+    } catch (err) {
+      console.error('Database update failed:', err)
+      return res.status(500).json({
+        status: false,
+        message: 'Database update failed',
+      })
+    }
+
+    res.json({
+      status: true,
+      message: 'File is uploaded',
+      data: {
+        name: req.file.filename,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+      },
+    })
+  }
+)
+/*--------------------------*/
 
 export default router

@@ -21,6 +21,7 @@ import { compareHash } from '#db-helpers/password-hash.js'
 // 定義安全的私鑰字串
 const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET
 
+// 已完成
 // 檢查登入狀態用
 router.get('/check', authenticate, async (req, res) => {
   // 查詢資料庫目前的資料
@@ -36,6 +37,7 @@ router.get('/check', authenticate, async (req, res) => {
   }
 })
 
+// 已完成
 router.post('/login', async (req, res) => {
   // 從前端來的資料 req.body = { email:'xxxx', password :'xxxx'}
   const loginUser = req.body
@@ -111,12 +113,14 @@ router.post('/login', async (req, res) => {
   })
 })
 
+// 已完成
 router.post('/logout', authenticate, (req, res) => {
   // 清除cookie
   res.clearCookie('accessToken', { httpOnly: true })
   res.json({ status: 'success', data: null })
 })
 
+// 已完成
 router.post('/register', async (req, res) => {
   // 從前端來的資料 req.body = { email:'xxxx', password :'xxxx', name: 'xxxx', nickname: 'xxxx', mobile: 'xxxx', birthday: 'xxxx', address: 'xxxx'}
   const registerUser = req.body

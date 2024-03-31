@@ -55,7 +55,17 @@ Headers加(key Authorization )(value Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 
           { name, mobile: newMobile, address }
 
-4.(未完成)上傳大貼照的部分
+{3/31}
+完成上傳圖片並更新在頁面中，要注意跟修改的點很多
+
+1.上傳的路由，必須加上兩個middleware，包含multer(還要特別設定存放路徑跟新檔名)，
+跟會員驗證authenticate，還要更新資料庫的圖片名稱對應新檔名，以便前端抓到圖片資料
+
+2.next的設定也非常複雜，如果要把input type file自定義樣式，要把她設display:'none'，
+還要用useRef創建參照，還要定義一個函數模擬點擊input元件。 fetchUserData() 包含後端來的資料
+要非同步處理user狀態跟file狀態，處理的函式在使用useEffect包起來，組件掛載時取得資料。
+檔案上傳記得掛 credentials: 'include' 帶上cookie外，請求體也要改成formData，
+上傳完成後，在呼叫一次 fetchUserData() ，會觸發useEffect更動圖片
 
 
 
