@@ -41,7 +41,7 @@ router.post('/', async function (req, res, next) {
     id: 0,
     username: '',
     google_uid: '',
-    line_uid: '',
+    // line_uid: '',
   }
 
   if (total) {
@@ -58,7 +58,7 @@ router.post('/', async function (req, res, next) {
       id: dbUser.id,
       username: dbUser.username,
       google_uid: dbUser.google_uid,
-      line_uid: dbUser.line_uid,
+      // line_uid: dbUser.line_uid,
     }
   } else {
     // 2-2. 不存在 -> 建立一個新會員資料(無帳號與密碼)，只有google來的資料 -> 執行登入工作
@@ -77,7 +77,7 @@ router.post('/', async function (req, res, next) {
       id: newUser.id,
       username: '',
       google_uid: newUser.google_uid,
-      line_uid: newUser.line_uid,
+      // line_uid: newUser.line_uid,
     }
   }
 

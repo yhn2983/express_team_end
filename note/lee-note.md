@@ -16,7 +16,9 @@
 Headers加(key Authorization )(value Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwibmlja25hbWUiOiLmiJHmmK_kvb_nlKjogIUiLCJpYXQiOjE3MTExMzYyMTEsImV4cCI6MTcxMTM5NTQxMX0.1tjBlsUAMboLfE3X6b38CTz9D2CETpnqeU7AyUxz9vI)
 就可以得到驗證過後的資料了
 
+
 {3/24}
+
 1.完成前端登入登出表單的功能
 輸入email跟password就會發送JSON給後端，後端去資料庫中找資料，
 成功登入後會直接把登入狀態存在localStorage，也加了可以清除的方法
@@ -30,7 +32,9 @@ Headers加(key Authorization )(value Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 
 4.試著把樣式寫上去
 
+
 {3/25}
+
 1.增加前端驗證功能，記得要留紅色提醒的位置，不要讓表單忽大忽小
 
 2.Scss注意事項，雖然next可以直接用scss.module，不過只限於html標籤<button><table><td>...
@@ -55,7 +59,9 @@ Headers加(key Authorization )(value Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 
           { name, mobile: newMobile, address }
 
+
 {3/31}
+
 完成上傳圖片並更新在頁面中，要注意跟修改的點很多
 
 1.上傳的路由，必須加上兩個middleware，包含multer(還要特別設定存放路徑跟新檔名)，
@@ -66,6 +72,17 @@ Headers加(key Authorization )(value Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 要非同步處理user狀態跟file狀態，處理的函式在使用useEffect包起來，組件掛載時取得資料。
 檔案上傳記得掛 credentials: 'include' 帶上cookie外，請求體也要改成formData，
 上傳完成後，在呼叫一次 fetchUserData() ，會觸發useEffect更動圖片
+
+
+{4/1}
+
+1.加一點樣式給profile
+
+2.創建忘記密碼功能跟表單，並且完成功能
+
+3.試試看google登入
+
+  (1)
 
 
 
