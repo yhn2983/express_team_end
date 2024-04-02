@@ -17,6 +17,8 @@ import { compareHash } from '#db-helpers/password-hash.js'
 // 上傳檔案用使用multer
 import path from 'path'
 import multer from 'multer'
+// import crypto from 'crypto'
+import { v4 as uuidv4 } from 'uuid'
 
 // multer的設定值 - START
 const storage = multer.diskStorage({
@@ -27,8 +29,14 @@ const storage = multer.diskStorage({
   filename: function (req, file, callback) {
     // 經授權後，req.user帶有會員的id
     const newFilename = req.user.id
-    // 新檔名由表單傳來的req.body.newFilename決定
-    callback(null, newFilename + path.extname(file.originalname))
+
+    // 生成一個唯一ID
+    const uniqueId = uuidv4()
+
+    // 將唯一ID添加到新的檔案名稱後面
+    const finalFilename = `${newFilename}-${uniqueId}${path.extname(file.originalname)}`
+
+    callback(null, finalFilename)
   },
 })
 const upload = multer({ storage: storage })
