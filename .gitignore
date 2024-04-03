@@ -4,6 +4,7 @@
 public/imgs
 dev.env
 
+routes/important.sql
 routes/ws-chat.js
 routes/ws-draw.js
 views

@@ -1,6 +1,6 @@
 import express from 'express'
 import homeRouter from './routes/home.js'
-import prodRouter from './routes/_products.js'
+import prodRouter from './routes/products.js'
 import session from 'express-session'
 import mysql_session from 'express-mysql-session'
 //import dayjs from 'dayjs'
@@ -89,13 +89,13 @@ app.use('/products', prodRouter)
 // 兩個類似的路徑, 嚴謹的放前面
 
 //適用2層以下的分類
-app.get('/cate1/:api?', async (req, res) => {
+app.get('/cate2/:api?', async (req, res) => {
   const data = []
-  const [rows] = await db.query('SELECT * FROM categories')
+  const [rows] = await db.query('SELECT * FROM categories ORDER BY id DESC')
 
   // 先取得第一層的資料
   for (let item of rows) {
-    if (+item.parent_sid === 0) {
+    if (+item.parent_id === 0) {
       data.push(item)
     }
   }
@@ -104,7 +104,7 @@ app.get('/cate1/:api?', async (req, res) => {
   for (let a1 of data) {
     // 拿資料表每一個項目
     for (let item of rows) {
-      if (+a1.sid === +item.parent_sid) {
+      if (+a1.id === +item.parent_id) {
         a1.nodes = a1.nodes || [] //設定陣列, 如果原本有就傳原本的陣列;沒有就建立空陣列
         a1.nodes.push(item)
       }
@@ -119,25 +119,25 @@ app.get('/cate1/:api?', async (req, res) => {
 })
 
 // 適用分類有2層以上皆可
-app.get('/cate2', async (req, res) => {
-  const [rows] = await db.query('SELECT * FROM categories ORDER BY sid DESC')
+app.get('/cate1/:api?', async (req, res) => {
+  const [rows] = await db.query('SELECT * FROM categories ORDER BY id DESC')
   // primary key當作key物件,對表用
   const dict = {}
   for (let i of rows) {
-    dict[i.sid] = i
+    dict[i.id] = i
   }
   // 上下的關係建立起來
   for (let i of rows) {
     // 如果 i 這個項目有上一層
-    if (i.parent_sid) {
-      const parent = dict[i.parent_sid] // 取得它的上一層
+    if (i.parent_id) {
+      const parent = dict[i.parent_id] // 取得它的上一層
       parent.nodes ||= [] // 等於parent.nodes = parent.nodes || []的意思
       parent.nodes.push(i)
     }
   }
   const data = []
   for (let i of rows) {
-    if (!i.parent_sid) {
+    if (!i.parent_id) {
       data.push(i)
     }
   }
