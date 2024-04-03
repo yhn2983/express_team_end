@@ -9,7 +9,7 @@ import { getIdParam } from '#db-helpers/db-tool.js'
 
 // 資料庫使用
 import sequelize from '#configs/db.js'
-const { User } = sequelize.models
+const { Member } = sequelize.models
 
 // 驗証加密密碼字串用
 import { compareHash } from '#db-helpers/password-hash.js'
@@ -17,6 +17,8 @@ import { compareHash } from '#db-helpers/password-hash.js'
 // 上傳檔案用使用multer
 import path from 'path'
 import multer from 'multer'
+// import crypto from 'crypto'
+import { v4 as uuidv4 } from 'uuid'
 
 // multer的設定值 - START
 const storage = multer.diskStorage({
@@ -27,8 +29,14 @@ const storage = multer.diskStorage({
   filename: function (req, file, callback) {
     // 經授權後，req.user帶有會員的id
     const newFilename = req.user.id
-    // 新檔名由表單傳來的req.body.newFilename決定
-    callback(null, newFilename + path.extname(file.originalname))
+
+    // 生成一個唯一ID
+    const uniqueId = uuidv4()
+
+    // 將唯一ID添加到新的檔案名稱後面
+    const finalFilename = `${newFilename}-${uniqueId}${path.extname(file.originalname)}`
+
+    callback(null, finalFilename)
   },
 })
 const upload = multer({ storage: storage })
@@ -36,7 +44,7 @@ const upload = multer({ storage: storage })
 
 // GET - 得到所有會員資料
 router.get('/', async function (req, res) {
-  const users = await User.findAll({ logging: console.log })
+  const users = await Member.findAll({ logging: console.log })
   // 處理如果沒找到資料
 
   // 標準回傳JSON
@@ -53,7 +61,7 @@ router.get('/:id', authenticate, async function (req, res) {
     return res.json({ status: 'error', message: '存取會員資料失敗' })
   }
 
-  const user = await User.findByPk(id, {
+  const user = await Member.findByPk(id, {
     raw: true, // 只需要資料表中資料
   })
 
@@ -69,16 +77,16 @@ router.post('/', async function (req, res) {
   // {
   //     "name":"金妮",
   //     "email":"ginny@test.com",
-  //     "username":"ginny",
+  //     "nickname":"ginny",
   //     "password":"12345"
   // }
 
   // 要新增的會員資料
   const newUser = req.body
 
-  // 檢查從前端來的資料哪些為必要(name, username...)
+  // 檢查從前端來的資料哪些為必要(name, nickname...)
   if (
-    !newUser.username ||
+    !newUser.nickname ||
     !newUser.email ||
     !newUser.name ||
     !newUser.password
@@ -89,8 +97,8 @@ router.post('/', async function (req, res) {
   // 執行後user是建立的會員資料，created為布林值
   // where指的是不可以有相同的資料，如username與email不能有相同的
   // defaults用於建立新資料用
-  const [user, created] = await User.findOrCreate({
-    where: { username: newUser.username, email: newUser.email },
+  const [user, created] = await Member.findOrCreate({
+    where: { nickname: newUser.nickname, email: newUser.email },
     defaults: {
       name: newUser.name,
       password: newUser.password,
@@ -127,7 +135,7 @@ router.post(
       const data = { avatar: req.file.filename }
 
       // 對資料庫執行update
-      const [affectedRows] = await User.update(data, {
+      const [affectedRows] = await Member.update(data, {
         where: {
           id,
         },
@@ -173,7 +181,7 @@ router.put('/:id/password', authenticate, async function (req, res) {
   }
 
   // 查詢資料庫目前的資料
-  const dbUser = await User.findByPk(id, {
+  const dbUser = await Member.findByPk(id, {
     raw: true, // 只需要資料表中資料
   })
 
@@ -192,7 +200,7 @@ router.put('/:id/password', authenticate, async function (req, res) {
   }
 
   // 對資料庫執行update
-  const [affectedRows] = await User.update(
+  const [affectedRows] = await Member.update(
     { password: userPassword.new },
     {
       where: {
@@ -211,6 +219,7 @@ router.put('/:id/password', authenticate, async function (req, res) {
   return res.json({ status: 'success', data: null })
 })
 
+// 已完成
 // PUT - 更新會員資料(排除更新密碼)
 router.put('/:id/profile', authenticate, async function (req, res) {
   const id = getIdParam(req)
@@ -229,7 +238,7 @@ router.put('/:id/profile', authenticate, async function (req, res) {
   }
 
   // 查詢資料庫目前的資料
-  const dbUser = await User.findByPk(id, {
+  const dbUser = await Member.findByPk(id, {
     raw: true, // 只需要資料表中資料
   })
 
@@ -244,7 +253,7 @@ router.put('/:id/profile', authenticate, async function (req, res) {
   }
 
   // 對資料庫執行update
-  const [affectedRows] = await User.update(user, {
+  const [affectedRows] = await Member.update(user, {
     where: {
       id,
     },
@@ -256,7 +265,7 @@ router.put('/:id/profile', authenticate, async function (req, res) {
   }
 
   // 更新成功後，找出更新的資料，updatedUser為更新後的會員資料
-  const updatedUser = await User.findByPk(id, {
+  const updatedUser = await Member.findByPk(id, {
     raw: true, // 只需要資料表中資料
   })
 
@@ -271,7 +280,7 @@ router.put('/:id/profile', authenticate, async function (req, res) {
 router.delete('/:id', async function (req, res) {
   const id = getIdParam(req)
 
-  const affectedRows = await User.destroy({
+  const affectedRows = await Member.destroy({
     where: {
       id,
     },
@@ -288,5 +297,57 @@ router.delete('/:id', async function (req, res) {
   // 成功
   return res.json({ status: 'success', data: null })
 })
+
+// 已完成
+// 更換大頭貼照片
+// 上傳檔案的路由
+router.post(
+  '/upload-avatar-one',
+  authenticate,
+  upload.single('avatar'),
+  async (req, res) => {
+    // 檢查是否有上傳的檔案
+    if (!req.file) {
+      return res.status(400).json({
+        status: false,
+        message: 'No file uploaded',
+      })
+    }
+
+    // 更新資料庫中的圖片名稱
+    try {
+      const [numberOfAffectedRows] = await Member.update(
+        { photo: req.file.filename },
+        {
+          where: { id: req.user.id },
+        }
+      )
+      // check if the update was successful
+      if (numberOfAffectedRows === 0) {
+        return res.status(400).json({
+          status: false,
+          message: 'Could not update photo',
+        })
+      }
+    } catch (err) {
+      console.error('Database update failed:', err)
+      return res.status(500).json({
+        status: false,
+        message: 'Database update failed',
+      })
+    }
+
+    res.json({
+      status: true,
+      message: 'File is uploaded',
+      data: {
+        name: req.file.filename,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+      },
+    })
+  }
+)
+/*--------------------------*/
 
 export default router

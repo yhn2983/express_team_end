@@ -6,7 +6,7 @@ import app from '../app.js'
 import debugLib from 'debug'
 import http from 'http'
 const debug = debugLib('node-express-es6:server')
-import { exit } from 'node:process'
+// import { exit } from 'node:process'
 
 // 導入dotenv 使用 .env 檔案中的設定值 process.env
 import 'dotenv/config.js'
@@ -15,7 +15,7 @@ import 'dotenv/config.js'
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '6005')
+var port = normalizePort(process.env.WEB_PORT || '6005')
 app.set('port', port)
 
 /**
