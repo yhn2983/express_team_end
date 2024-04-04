@@ -151,6 +151,7 @@ router.post('/register', async (req, res) => {
       level_desc: '等待任務中',
       carbon_points_got: 0,
       carbon_points_have: 0,
+      google_uid: null, // 將 google_uid 設定為 NULL
     },
   })
 
