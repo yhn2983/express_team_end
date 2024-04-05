@@ -20,7 +20,7 @@ router.post('/', async function (req, res, next) {
     return res.json({ status: 'error', message: '缺少google登入資料' })
   }
 
-  const { displayName, email, uid, photoURL } = req.body
+  const { displayName, email, uid } = req.body
   const google_uid = uid
 
   // 以下流程:
@@ -64,8 +64,17 @@ router.post('/', async function (req, res, next) {
     // 2-2. 不存在 -> 建立一個新會員資料(無帳號與密碼)，只有google來的資料 -> 執行登入工作
     const user = {
       name: displayName,
+      nickname: displayName,
       email: email,
       google_uid,
+      mobile: '',
+      address: '',
+      photo: 'default.png', // 預設的photo
+      member_level: 1,
+      level_name: 'level 0',
+      level_desc: '等待任務中',
+      carbon_points_got: 0,
+      carbon_points_have: 0,
     }
 
     // 新增會員資料
