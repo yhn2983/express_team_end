@@ -12,17 +12,25 @@ const getListData = async (req) => {
   let where = ' WHERE 1 '
   if (keyword) {
     where += ` AND ( 
-    \`name\` LIKE ${db.escape(`%${keyword}%`)} 
-    OR
     \`product_name\` LIKE ${db.escape(`%${keyword}%`)} 
-    OR
-    \`category_name\` LIKE ${db.escape(`%${keyword}%`)} 
-    OR
-    \`sub_category\` LIKE ${db.escape(`%${keyword}%`)}
-    OR
-    \`status_now\` LIKE ${db.escape(`%${keyword}%`)}
     )
     ` // escape本身就會加''單引號, 不需要再額外加上
+  }
+
+  // category search
+  let searchMain = req.query.searchMain || ''
+  let searchSub = req.query.searchSub || ''
+  if (searchMain) {
+    where += ` AND (
+      \`main\`.\`category_name\` = ${db.escape(searchMain)}
+      OR
+      \`sub\`.\`category_name\` =${db.escape(searchMain)}
+    )`
+  }
+  if (searchSub) {
+    where += ` AND (
+      \`sub\`.\`category_name\` = ${db.escape(searchSub)}
+    )`
   }
 
   // price search
@@ -75,65 +83,82 @@ const getListData = async (req) => {
   }
 
   // product status search
-  let searchProdStatusA = req.query.searchProdStatus || ''
-  let searchProdStatusB = req.query.searchProdStatus || ''
+  let searchProdStatusA = req.query.searchProdStatusA || ''
+  let searchProdStatusB = req.query.searchProdStatusB || ''
   if (searchProdStatusA) {
     where += ` AND (
-      \`product_price\` == 1
+      \`product_price\` = 1
     )`
   }
   if (searchProdStatusB) {
     where += ` AND (
-      \`product_price\` == 2
+      \`product_price\` = 2
     )`
   }
 
-  let searchItem = req.query.searchItem || ''
-  let searchField = ''
-  let search_begin = req.query.search_begin || ''
-  let search_end = req.query.search_end || ''
-  if (searchItem !== '') {
-    switch (searchItem) {
-      case 'product_price':
-        searchField = '`products`.`product_price`'
-        where += ` AND (
-          ${searchField} >= ${db.escape(search_begin)} 
-          AND 
-          ${searchField} <= ${db.escape(search_end)}
-        )`
-        break
-      case 'carbon_points_available':
-        searchField = '`products`.`carbon_points_available`'
-        where += ` AND (
-          ${searchField} >= ${db.escape(search_begin)} 
-          AND 
-          ${searchField} <= ${db.escape(search_end)}
-        )`
-        break
-      case 'created_at':
-        searchField = '`products`.`created_at`'
-        where += ` AND (
-          ${searchField} >= ${db.escape(search_begin)} 
-          AND 
-          ${searchField} <= ${db.escape(search_end)}
-        )`
-        break
-      case 'edit_new':
-        searchField = '`products`.`edit_new`'
-        where += ` AND (
-          ${searchField} >= ${db.escape(search_begin)} 
-          AND 
-          ${searchField} <= ${db.escape(search_end)}
-        )`
-        break
-      default:
-        break
-    }
+  // upload time search
+  let searchDateA = req.query.searchDateA || ''
+  let searchDateB = req.query.searchDateB || ''
+  let searchDateC = req.query.searchDateC || ''
+  let searchDateD = req.query.searchDateD || ''
+  let searchDateE = req.query.searchDateE || ''
+  let searchDateF = req.query.searchDateF || ''
+  let searchDateStart = req.query.searchDateStart || ''
+  let searchDateEnd = req.query.searchDateEnd || ''
+  if (searchDateA) {
+    where += ` AND (
+      \`p\`.\`created_at\` >= '${dayjs('2010-01-01').format('YYYY-MM-DD')}'
+      AND
+      \`p\`.\`created_at\` <= '${dayjs('2012-12-31').format('YYYY-MM-DD')}'
+    )`
+  }
+  if (searchDateB) {
+    where += ` AND (
+      \`p\`.\`created_at\` >= '${dayjs('2013-01-01').format('YYYY-MM-DD')}'
+      AND
+      \`p\`.\`created_at\` <= '${dayjs('2015-12-31').format('YYYY-MM-DD')}'
+    )`
+  }
+  if (searchDateC) {
+    where += ` AND (
+      \`p\`.\`created_at\` >= '${dayjs('2016-01-01').format('YYYY-MM-DD')}'
+      AND
+      \`p\`.\`created_at\` <= '${dayjs('2018-12-31').format('YYYY-MM-DD')}'
+    )`
+  }
+  if (searchDateD) {
+    where += ` AND (
+      \`p\`.\`created_at\` >= '${dayjs('2019-01-01').format('YYYY-MM-DD')}'
+      AND
+      \`p\`.\`created_at\` <= '${dayjs('2021-12-31').format('YYYY-MM-DD')}'
+    )`
+  }
+  if (searchDateE) {
+    where += ` AND (
+      \`p\`.\`created_at\` >= '${dayjs('2022-01-01').format('YYYY-MM-DD')}'
+      AND
+      \`p\`.\`created_at\` <= '${dayjs('2023-01-01').format('YYYY-MM-DD')}'
+    )`
+  }
+  if (searchDateF) {
+    where += ` AND (
+      \`p\`.\`created_at\` >= '${dayjs('2024-01-01').format('YYYY-MM-DD')}'
+      AND
+      \`p\`.\`created_at\` <= '${dayjs('2024-12-31').format('YYYY-MM-DD')}'
+    )`
+  }
+
+  if (searchDateStart || searchDateEnd) {
+    where += ` AND (
+      \`p\`.\`created_at\` >= '${dayjs(searchDateStart).format('YYYY-MM-DD')}'
+      AND
+      \`p\`.\`created_at\` <= '${dayjs(searchDateEnd).format('YYYY-MM-DD')}'
+    )`
   }
 
   // 頁數設定
   let redirect = ''
-  const perPage = 15
+  const perPage = 18
   const sql = `SELECT COUNT(1) AS totalRows FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where}`
   let page = +req.query.page || 1
   if (page < 1) {
@@ -150,7 +175,7 @@ const getListData = async (req) => {
       redirect = `?page=${totalPages}`
       return { success: false, redirect }
     }
-    const sql2 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname, ab.photo FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} ORDER BY p.id DESC LIMIT ${(page - 1) * perPage}, ${perPage}`
+    const sql2 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} ORDER BY p.id DESC LIMIT ${(page - 1) * perPage}, ${perPage}`
     ;[rows] = await db.query(sql2)
   }
 
@@ -158,6 +183,10 @@ const getListData = async (req) => {
     item.created_at = dayjs(item.created_at).format('YYYY-MM-DD')
     item.edit_new = dayjs(item.edit_new).format('YYYY-MM-DD')
   })
+
+  let rowsRandom = []
+  const sql3 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} ORDER BY RAND()`
+  ;[rowsRandom] = await db.query(sql3)
 
   const cate = []
   const [cateRows] = await db.query('SELECT * FROM categories')
@@ -185,10 +214,13 @@ const getListData = async (req) => {
     perPage,
     totalPages,
     rows,
+    rowsRandom,
     page,
     keyword,
     qs: req.query,
     cate,
+    searchMain,
+    searchSub,
     searchPriceA,
     searchPriceB,
     searchPriceC,
@@ -196,6 +228,16 @@ const getListData = async (req) => {
     searchPriceE,
     priceStart,
     priceEnd,
+    searchProdStatusA,
+    searchProdStatusB,
+    searchDateA,
+    searchDateB,
+    searchDateC,
+    searchDateD,
+    searchDateE,
+    searchDateF,
+    searchDateStart,
+    searchDateEnd,
   }
 }
 
