@@ -53,7 +53,7 @@ export default async function (sequelize) {
       },
       member_level: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
       },
       level_name: {
         type: DataTypes.STRING(10),

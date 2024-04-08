@@ -233,7 +233,7 @@ router.put('/:id/profile', authenticate, async function (req, res) {
   const user = req.body
 
   // 檢查從前端瀏覽器來的資料，哪些為必要(name, ...)
-  if (!id || !user.name) {
+  if (!id) {
     return res.json({ status: 'error', message: '缺少必要資料' })
   }
 

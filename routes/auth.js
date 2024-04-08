@@ -125,6 +125,11 @@ router.post('/register', async (req, res) => {
   // 從前端來的資料 req.body = { email:'xxxx', password :'xxxx', name: 'xxxx', nickname: 'xxxx', mobile: 'xxxx', birthday: 'xxxx', address: 'xxxx'}
   const registerUser = req.body
 
+  // // 如果電話號碼的第一個字元是 "0"，則去掉它
+  // if (registerUser.mobile.startsWith('0')) {
+  //   registerUser.mobile = registerUser.mobile.substring(1)
+  // }
+
   // 查詢資料庫，是否已存在相同的email
   // where指的的是不可以有相同的email
   // defaults就新增資料

@@ -1,72 +1,91 @@
-/* eslint-disable import/no-unresolved */
 import express from 'express'
-import { OAuth2Client } from 'google-auth-library'
+const router = express.Router()
+
 import sequelize from '#configs/db.js'
-import 'dotenv/config.js'
+const { Member } = sequelize.models
+
 import jsonwebtoken from 'jsonwebtoken'
+// 存取`.env`設定檔案使用
+import 'dotenv/config.js'
 
 // 定義安全的私鑰字串
 const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET
 
-const { Member } = sequelize.models
-const router = express.Router()
+router.post('/', async function (req, res, next) {
+  // providerData =  req.body
+  console.log(JSON.stringify(req.body))
 
-const oAuth2Client = new OAuth2Client(
-  process.env.CLIENT_ID,
-  process.env.CLIENT_SECRET,
-  'postmessage'
-)
+  // 檢查從react來的資料
+  if (!req.body.providerId || !req.body.uid) {
+    return res.json({ status: 'error', message: '缺少google登入資料' })
+  }
 
-router.post('/', async (req, res) => {
-  const { tokens } = await oAuth2Client.getToken(req.body.code) // exchange code for tokens
-  const { id_token, access_token } = tokens
-  const ticket = await oAuth2Client.verifyIdToken({
-    idToken: id_token,
-    audience: process.env.CLIENT_ID,
-  })
-  const { sub: google_uid, email, name: displayName } = ticket.getPayload()
+  const { displayName, email, uid } = req.body
+  const google_uid = uid
 
-  console.log('access_token', access_token)
+  // 以下流程:
+  // 1. 先查詢資料庫是否有同google_uid的資料
+  // 2-1. 有存在 -> 執行登入工作
+  // 2-2. 不存在 -> 建立一個新會員資料(無帳號與密碼)，只有google來的資料 -> 執行登入工作
 
+  // 1. 先查詢資料庫是否有同google_uid的資料
   const total = await Member.count({
     where: {
       google_uid,
     },
   })
 
+  // 要加到access token中回傳給前端的資料
+  // 存取令牌(access token)只需要id和username就足夠，其它資料可以再向資料庫查詢
   let returnUser = {
     id: 0,
     nickname: '',
     google_uid: '',
+    // line_uid: '',
   }
 
   if (total) {
+    // 2-1. 有存在 -> 從資料庫查詢會員資料
     const dbUser = await Member.findOne({
       where: {
         google_uid,
       },
-      raw: true,
+      raw: true, // 只需要資料表中資料
     })
 
+    // 回傳給前端的資料
     returnUser = {
       id: dbUser.id,
       nickname: dbUser.nickname,
       google_uid: dbUser.google_uid,
+      // line_uid: dbUser.line_uid,
     }
   } else {
+    // 2-2. 不存在 -> 建立一個新會員資料(無帳號與密碼)，只有google來的資料 -> 執行登入工作
     const user = {
       name: displayName,
+      nickname: displayName,
       email: email,
       google_uid,
-      member_level: 0,
+      mobile: '',
+      address: '',
+      photo: 'default.png', // 預設的photo
+      member_level: 1,
+      level_name: 'level 0',
+      level_desc: '等待任務中',
+      carbon_points_got: 0,
+      carbon_points_have: 0,
     }
 
+    // 新增會員資料
     const newUser = await Member.create(user)
 
+    // 回傳給前端的資料
     returnUser = {
       id: newUser.id,
       nickname: '',
       google_uid: newUser.google_uid,
+      // line_uid: newUser.line_uid,
     }
   }
 
@@ -75,32 +94,16 @@ router.post('/', async (req, res) => {
     expiresIn: '3d',
   })
 
-  // 將 access token 存儲在 httpOnly cookie 中
-  // 將 access token 存儲在 httpOnly cookie 中
-  res.cookie('accessToken', accessToken, {
-    httpOnly: true,
-    sameSite: 'None',
-    secure: true,
-  })
+  // 使用httpOnly cookie來讓瀏覽器端儲存access token
+  res.cookie('accessToken', accessToken, { httpOnly: true })
 
   // 傳送access token回應(react可以儲存在state中使用)
-  // 延遲 1 秒後再結束 response
-  setTimeout(() => {
-    return res.json({
-      status: 'success',
-      data: {
-        accessToken,
-      },
-    })
-  }, 1000)
-})
-
-router.post('/auth/google/refresh-token', async (req, res) => {
-  oAuth2Client.setCredentials({
-    refresh_token: req.body.refreshToken,
+  return res.json({
+    status: 'success',
+    data: {
+      accessToken,
+    },
   })
-  const newTokens = await oAuth2Client.refreshAccessToken() // optain new tokens
-  res.json(newTokens.credentials)
 })
 
 export default router
