@@ -39,6 +39,7 @@ const getListData = async (req) => {
   let searchPriceC = req.query.searchPriceC || ''
   let searchPriceD = req.query.searchPriceD || ''
   let searchPriceE = req.query.searchPriceE || ''
+  let searchPrice = req.query.searchPrice || ''
   let priceStart = req.query.priceStart || ''
   let priceEnd = req.query.priceEnd || ''
   if (searchPriceA) {
@@ -74,12 +75,19 @@ const getListData = async (req) => {
       \`product_price\` >= 5001
     )`
   }
-  if (priceStart || priceEnd) {
-    where += ` AND (
-      \`product_price\` >= ${db.escape(priceStart)}
-      AND
-      \`product_price\` < ${db.escape(priceEnd)}
-    )`
+  if (searchPrice) {
+    const newpPriceStart = parseInt(priceStart)
+    const newPriceEnd = parseInt(priceEnd)
+    if (newpPriceStart) {
+      where += ` AND (
+        \`product_price\` >= ${db.escape(newpPriceStart)}
+      )`
+    }
+    if (newPriceEnd) {
+      where += ` AND (
+        \`product_price\` < ${db.escape(newPriceEnd)}
+      )`
+    }
   }
 
   // product status search
@@ -87,12 +95,12 @@ const getListData = async (req) => {
   let searchProdStatusB = req.query.searchProdStatusB || ''
   if (searchProdStatusA) {
     where += ` AND (
-      \`product_price\` = 1
+      \`product_status\` = 1
     )`
   }
   if (searchProdStatusB) {
     where += ` AND (
-      \`product_price\` = 2
+      \`product_status\` = 2
     )`
   }
 
@@ -103,6 +111,7 @@ const getListData = async (req) => {
   let searchDateD = req.query.searchDateD || ''
   let searchDateE = req.query.searchDateE || ''
   let searchDateF = req.query.searchDateF || ''
+  let searchDate = req.query.searchDate || ''
   let searchDateStart = req.query.searchDateStart || ''
   let searchDateEnd = req.query.searchDateEnd || ''
   if (searchDateA) {
@@ -147,13 +156,17 @@ const getListData = async (req) => {
       \`p\`.\`created_at\` <= '${dayjs('2024-12-31').format('YYYY-MM-DD')}'
     )`
   }
-
-  if (searchDateStart || searchDateEnd) {
-    where += ` AND (
+  if (searchDate) {
+    if (searchDateStart) {
+      where += ` AND (
       \`p\`.\`created_at\` >= '${dayjs(searchDateStart).format('YYYY-MM-DD')}'
-      AND
+    )`
+    }
+    if (searchDateEnd) {
+      where += ` AND (
       \`p\`.\`created_at\` <= '${dayjs(searchDateEnd).format('YYYY-MM-DD')}'
     )`
+    }
   }
 
   // 頁數設定
@@ -287,16 +300,35 @@ router.delete('/:product_id', async (req, res) => {
   const [result] = await db.query(sql, [id])
   res.json(result)
 })
-/*
-  {
-    "fieldCount": 0, 
-    "affectedRows": 1, 
-    "insertId": 0, 
-    "info": "", 
-    "serverStatus": 2, 
-    "warningStatus": 0
+
+// 購物車新增路由
+// 處理新增資料的表單
+router.post('/add', upload.none(), async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
   }
-*/
+
+  const sql =
+    'INSERT INTO `cart` (product_photos, product_price, product_qty, total_price, available_cp) VALUES (?, ?, ?, ?, ?)'
+
+  try {
+    const [result] = await db.query(sql, [
+      req.body.product_photos,
+      req.body.product_price,
+      req.body.product_qty,
+      req.body.total_price,
+      req.body.available_cp,
+    ])
+    output.success = !!result.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  res.json(output)
+})
 
 // // 新增路由
 // router.get('/add', upload.single('photo'), async (req, res) => {

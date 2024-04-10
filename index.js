@@ -6,13 +6,9 @@ import mysql_session from 'express-mysql-session'
 //import dayjs from 'dayjs'
 import db from './utils/mysql2-connect.js'
 import cors from 'cors'
-//import bcrypt from 'bcryptjs'
-//import wsServer from "./routes/ws-chat.js";
-//import wsServer from './routes/ws-draw.js'
 
 // *** 將session資料存入MySQL
 const MysqlStore = mysql_session(session)
-// 建立儲存的地方: 設定一開始為空物件, 並放入db, 將會建立出一張新的SQL資料表
 const sessionStore = new MysqlStore({}, db)
 
 // ***建立server
@@ -21,8 +17,7 @@ const app = express()
 // ***set設定要在路由之前, 此段是設定使用的template樣板引擎為EJS
 app.set('view engine', 'ejs')
 
-// ***top level middlewares設定, 只能用use, 在路由之前做設定
-//透過判斷檔頭類型決定使用哪一個middleware
+// ***top level middlewares設定
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
@@ -52,7 +47,6 @@ app.use(
     store: sessionStore,
   })
 )
-// Z為格林威治標準時間
 
 // 自訂頂層的中介軟體
 app.use((req, res, next) => {
@@ -63,30 +57,10 @@ app.use((req, res, next) => {
   next()
 })
 
-/*
-//前端路由，若有後端路由要寫在這兩段之上
-app.use(express.static('build'));
-// *表示全部的頁面
-app.get("*", (req, res)=>{
-  res.send(`<!doctype html><html lang="zh"><head><meta charset="utf-8"/><link rel="icon" href="/favicon.ico"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#000000"/><meta name="description" content="Shinder react hooks"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"/><title>Shinder react hooks</title><script defer="defer" src="/static/js/main.6a205622.js"></script></head><body><noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div></body></html>`)
-});
-*/
-
 // ***設定路由(routes), 路由一定要/開頭, 否則是沒有效果的
 app.use('/', homeRouter)
 
 app.use('/products', prodRouter)
-
-//upload.none():表示沒有要上傳,但是可以做multipart/form-data的解析
-// 若有多個欄位內有多個檔案要上傳: field; 若有單一欄位有多個檔案要上傳: array; 若單一欄位單一檔案時用single
-//app.post("/try-upload", upload.single("avatar"), (req, res) => {
-//res.json(req.file);
-//});   //只可以使用multipart/form-data的格式
-
-// 路由一定要符合才會找到對應網頁
-// ":"冒號之後為變數代稱設定路由(動態路由)
-// "?"放在變數代稱之後表示不一定要有
-// 兩個類似的路徑, 嚴謹的放前面
 
 //適用2層以下的分類
 app.get('/cate2/:api?', async (req, res) => {
