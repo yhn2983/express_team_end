@@ -2,7 +2,6 @@ import express from 'express'
 import db from './../utils/mysql2-connect.js'
 import upload from './../utils/upload-imgs.js'
 import dayjs from 'dayjs'
-import { z } from 'zod'
 
 const router = express.Router()
 
