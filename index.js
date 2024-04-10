@@ -37,12 +37,6 @@ app.use(
     saveUninitialized: false,
     resave: false,
     secret: 'eadgeagrgsdfsdf',
-    /*
-  cookie: {
-    // session的存活時間, 沒有設定的話就會用瀏覽器預設的
-    maxAge: 1200_000,    //單位是毫秒, 底線是像,三位分隔
-  }
-  */
     // session儲存的地方
     store: sessionStore,
   })
@@ -58,65 +52,7 @@ app.use((req, res, next) => {
 })
 
 // ***設定路由(routes), 路由一定要/開頭, 否則是沒有效果的
-app.use('/', homeRouter)
-
 app.use('/products', prodRouter)
-
-//適用2層以下的分類
-app.get('/cate2/:api?', async (req, res) => {
-  const data = []
-  const [rows] = await db.query('SELECT * FROM categories ORDER BY id DESC')
-
-  // 先取得第一層的資料
-  for (let item of rows) {
-    if (+item.parent_id === 0) {
-      data.push(item)
-    }
-  }
-
-  //第二層的項目放在所屬的第一層底下
-  for (let a1 of data) {
-    // 拿資料表每一個項目
-    for (let item of rows) {
-      if (+a1.id === +item.parent_id) {
-        a1.nodes = a1.nodes || [] //設定陣列, 如果原本有就傳原本的陣列;沒有就建立空陣列
-        a1.nodes.push(item)
-      }
-    }
-  }
-  if (req.params.api === 'api') {
-    res.json(data)
-  } else {
-    res.render('cate1', { data })
-  }
-  //res.json(data);
-})
-
-// 適用分類有2層以上皆可
-app.get('/cate1/:api?', async (req, res) => {
-  const [rows] = await db.query('SELECT * FROM categories ORDER BY id DESC')
-  // primary key當作key物件,對表用
-  const dict = {}
-  for (let i of rows) {
-    dict[i.id] = i
-  }
-  // 上下的關係建立起來
-  for (let i of rows) {
-    // 如果 i 這個項目有上一層
-    if (i.parent_id) {
-      const parent = dict[i.parent_id] // 取得它的上一層
-      parent.nodes ||= [] // 等於parent.nodes = parent.nodes || []的意思
-      parent.nodes.push(i)
-    }
-  }
-  const data = []
-  for (let i of rows) {
-    if (!i.parent_id) {
-      data.push(i)
-    }
-  }
-  res.json(data)
-})
 
 // 收藏功能
 app.get('/like-toggle/:pid', async (req, res) => {
@@ -132,13 +68,7 @@ app.get('/like-toggle/:pid', async (req, res) => {
     output.info = '錯誤的商品編號'
     return res.json(output)
   }
-  /*
-  // pl.*: 表示只要pl這張表的所有欄位
-  const sql = `SELECT pl.* FROM product_likes as pl
-    JOIN products as p ON pl.product_id = p.id
-    WHERE pl.product_id=? AND pl.member_id=?`;
-  const [rows] = await db.query(sql, [pid, member_id]);
-  */
+
   //判斷是否有該項商品
   const p_sql = `SELECT id FROM products WHERE id=?`
   const [p_rows] = await db.query(p_sql, [pid])
@@ -177,7 +107,7 @@ app.use((req, res) => {
 })
 
 const port = process.env.WEB_PORT || 3002
-// 監聽通訊埠
+// ***監聽通訊埠***
 app.listen(port, () => {
   console.log(`使用通訊埠 ${port}`)
 })
