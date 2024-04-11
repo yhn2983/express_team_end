@@ -200,6 +200,10 @@ const getListData = async (req) => {
   const sql3 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} ORDER BY RAND()`
   ;[rowsRandom] = await db.query(sql3)
 
+  let barterProds = []
+  const sql4 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id where p.seller_id = 1019`
+  ;[barterProds] = await db.query(sql4)
+
   const cate = []
   const [cateRows] = await db.query('SELECT * FROM categories')
   // 先取得第一層的資料
@@ -312,6 +316,7 @@ const getListData = async (req) => {
     dateRangeD,
     dateRangeE,
     dateRangeF,
+    barterProds,
   }
 }
 
