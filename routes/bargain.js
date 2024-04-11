@@ -1,0 +1,79 @@
+import express from 'express'
+import db from '../utils/mysql2-connect.js'
+import upload from '../utils/upload-imgs.js'
+import dayjs from 'dayjs'
+import { z } from 'zod'
+import bodyParser from 'body-parser'
+import { v4 as uuidv4 } from 'uuid' // 引入 uuid 模块并解构出 v4 方法，并重命名为 uuidv4
+const router = express.Router()
+
+// 使用中间件解析请求体
+router.use(bodyParser.json())
+
+// 模拟数据库存储议价请求的数据结构
+let bargains = []
+
+// 创建议价请求
+router.post('/', async (req, res) => {
+  const { product_id, buyer_id, after_bargin_price } = req.body
+  const id = uuidv4()
+  const sql =
+    'INSERT INTO `bargain` (  `buyer_id`, `product_id`, `after_bargin_price` ) VALUES (?,?,?)'
+  const [result] = await db.query(sql, [
+    req.body.buyer_id,
+    req.body.product_id,
+    req.body.after_bargin_price,
+  ])
+  // 生成唯一的 ID
+  // 使用 uuidv4 生成唯一的 UUID
+
+  // 创建议价请求对象
+  const newBargain = {
+    id: id,
+    buyer_id: buyer_id,
+    after_bargin_price: after_bargin_price,
+    product_id: product_id,
+  }
+
+  bargains.push(newBargain)
+  console.log(newBargain)
+  console.log(bargains)
+  res.json(req.body)
+})
+
+router.get('/seller', async (req, res) => {
+  const sql = `SELECT * FROM bargain 
+  INNER JOIN products 
+    ON  products.id= bargain.product_id
+    INNER JOIN address_book 
+    ON  address_book.id= bargain.buyer_id
+  `
+  const [rows] = await db.query(sql)
+
+  res.json({ rows })
+})
+
+// 获取议价请求详情
+router.get('/get/:id', (req, res) => {
+  const id = req.params.id
+  const bargain = bargains.find((b) => b.id === id)
+  if (!bargain) {
+    res.status(404).json({ error: 'Bargain not found' })
+  } else {
+    res.json(bargain)
+  }
+})
+
+// 响应议价请求
+router.post('/:id/respond', (req, res) => {
+  console.log(req.body)
+  const id = req.params.id
+  const response = req.body
+
+  console.log({ response })
+  // 假设这里会更新数据库中的议价请求状态和相关信息
+
+  res.json({ message: `Response to Bargain ${id} successfully processed` })
+})
+
+export default router
