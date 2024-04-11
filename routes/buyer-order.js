@@ -37,9 +37,10 @@ const getOrderListData = async (req, res) => {
   }
 
   let qs = {} //紀錄 query string 參數
+  let subQuery = ''
 
   if (res.locals.jwt && res.locals.jwt.id) {
-    subQuery = `(SELECT * FROM product_likes WHERE member_sid=${res.locals.jwt.id}) pl`
+    subQuery = `(SELECT * FROM product_likes WHERE member_id=${res.locals.jwt.id}) pl`
   }
 
   let where = ' WHERE 1 '

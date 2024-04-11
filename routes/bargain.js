@@ -42,7 +42,7 @@ router.post('/', async (req, res) => {
 })
 
 router.get('/seller', async (req, res) => {
-  const sql = `SELECT * FROM bargain 
+  const sql = `SELECT *,bargain.id FROM bargain 
   INNER JOIN products 
     ON  products.id= bargain.product_id
     INNER JOIN address_book 
@@ -65,15 +65,32 @@ router.get('/get/:id', (req, res) => {
 })
 
 // 响应议价请求
-router.post('/:id/respond', (req, res) => {
+router.put('/:id/respond', async (req, res) => {
   console.log(req.body)
+
+  const sql = 'UPDATE `bargain` SET `ans_num`= ? WHERE id=?'
+  const [rows] = await db.query(sql, [req.body.ans_num, req.body.id])
+
   const id = req.params.id
   const response = req.body
 
   console.log({ response })
   // 假设这里会更新数据库中的议价请求状态和相关信息
 
-  res.json({ message: `Response to Bargain ${id} successfully processed` })
+  res.json(rows)
+})
+
+//形成bargain-checkout
+router.get('/checkout', async (req, res) => {
+  const sql = `SELECT *,bargain.id FROM bargain 
+  INNER JOIN products 
+    ON  products.id= bargain.product_id
+    INNER JOIN address_book 
+    ON  address_book.id= bargain.buyer_id
+  `
+  const [rows] = await db.query(sql)
+
+  res.json({ rows })
 })
 
 export default router
