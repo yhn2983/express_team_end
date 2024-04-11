@@ -3,6 +3,7 @@ import { Sequelize, DataTypes } from 'sequelize'
 
 // 加密密碼字串用
 import { generateHash } from '#db-helpers/password-hash.js'
+// import { tr } from '@faker-js/faker'
 
 export default async function (sequelize) {
   return sequelize.define(
@@ -15,7 +16,7 @@ export default async function (sequelize) {
       },
       photo: {
         type: DataTypes.STRING(255),
-        allowNull: false,
+        allowNull: true,
       },
       name: {
         type: DataTypes.STRING(20),
@@ -23,27 +24,27 @@ export default async function (sequelize) {
       },
       nickname: {
         type: DataTypes.STRING(25),
-        allowNull: false,
+        allowNull: true,
       },
       email: {
         type: DataTypes.STRING(255),
-        allowNull: false,
+        allowNull: true,
       },
       password: {
         type: DataTypes.STRING(255),
-        allowNull: false,
+        allowNull: true,
       },
       mobile: {
         type: DataTypes.STRING(20),
-        allowNull: false,
+        allowNull: true,
       },
       birthday: {
         type: DataTypes.DATE,
-        allowNull: false,
+        allowNull: true,
       },
       address: {
         type: DataTypes.STRING(255),
-        allowNull: false,
+        allowNull: true,
       },
       created_at: {
         type: DataTypes.DATE,
@@ -52,23 +53,27 @@ export default async function (sequelize) {
       },
       member_level: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
       },
       level_name: {
         type: DataTypes.STRING(10),
-        allowNull: false,
+        allowNull: true,
       },
       level_desc: {
         type: DataTypes.STRING(10),
-        allowNull: false,
+        allowNull: true,
       },
       carbon_points_got: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
       },
       carbon_points_have: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
+      },
+      google_uid: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
     },
     {
