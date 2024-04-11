@@ -81,14 +81,18 @@ router.put('/:id/respond', async (req, res) => {
 })
 
 //形成bargain-checkout
-router.get('/checkout', async (req, res) => {
-  const sql = `SELECT *,bargain.id FROM bargain 
-  INNER JOIN products 
-    ON  products.id= bargain.product_id
-    INNER JOIN address_book 
-    ON  address_book.id= bargain.buyer_id
+router.get('/checkout/:id', async (req, res) => {
+  const id = req.params.id
+  const sql = `SELECT 
+  bargain.id , pro.product_name , bargain.after_bargin_price ,pro.seller_id
+  FROM bargain 
+  INNER JOIN products AS pro 
+  ON pro.id = bargain.product_id
+  INNER JOIN address_book AS ab 
+  ON ab.id = bargain.buyer_id  
+  WHERE bargain.id = ?
   `
-  const [rows] = await db.query(sql)
+  const [rows] = await db.query(sql, [id])
 
   res.json({ rows })
 })
