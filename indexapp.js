@@ -1,5 +1,4 @@
 import express from 'express'
-import homeRouter from './routes/home.js'
 import prodRouter from './routes/products.js'
 import session from 'express-session'
 import mysql_session from 'express-mysql-session'
@@ -52,49 +51,12 @@ app.use((req, res, next) => {
 })
 
 // ***設定路由(routes), 路由一定要/開頭, 否則是沒有效果的
+// Raye:
 app.use('/products', prodRouter)
 
-// 收藏功能
-app.get('/like-toggle/:pid', async (req, res) => {
-  const member_id = 20 //測試的假資料
-  const output = {
-    success: false,
-    action: '',
-    info: '',
-  }
+// Chen:
 
-  const pid = +req.params.pid || 0
-  if (!pid) {
-    output.info = '錯誤的商品編號'
-    return res.json(output)
-  }
-
-  //判斷是否有該項商品
-  const p_sql = `SELECT id FROM products WHERE id=?`
-  const [p_rows] = await db.query(p_sql, [pid])
-  if (!p_rows.length) {
-    output.info = '沒有該商品'
-    return res.json(output)
-  }
-  const sql = `SELECT * FROM product_likes WHERE product_id=? AND member_id=?`
-  const [rows] = await db.query(sql, [pid, member_id])
-
-  if (rows.length) {
-    //有資料的話就移除
-    output.action = 'remove'
-    const [result] = await db.query(
-      `DELETE FROM product_likes WHERE id=${rows[0].id}`
-    )
-    output.success = !!result.affectedRows
-  } else {
-    // 沒有資料的話就加入
-    output.action = 'add'
-    const sql = `INSERT INTO product_likes (product_id, member_id) VALUES (?, ?) `
-    const [result] = await db.query(sql, [pid, member_id])
-    output.success = !!result.affectedRows
-  }
-  res.json(output)
-})
+// Kai:
 
 // ***靜態內容***
 app.use(express.static('public'))
