@@ -74,19 +74,19 @@ export default async function (sequelize) {
     {
       hooks: {
         // 建立時產生密碼加密字串用
-        beforeCreate: async (member_list) => {
-          if (member_list.password) {
-            member_list.password = await generateHash(member_list.password)
+        beforeCreate: async (address_book) => {
+          if (address_book.password) {
+            address_book.password = await generateHash(address_book.password)
           }
         },
         // 更新時產生密碼加密字串用
-        beforeUpdate: async (member_list) => {
-          if (member_list.password) {
-            member_list.password = await generateHash(member_list.password)
+        beforeUpdate: async (address_book) => {
+          if (address_book.password) {
+            address_book.password = await generateHash(address_book.password)
           }
         },
       },
-      tableName: 'member_list', //直接提供資料表名稱
+      tableName: 'address_book', //直接提供資料表名稱
       timestamps: false, // 禁用時間戳
       paranoid: false, // 軟性刪除
       underscored: true, // 所有自動建立欄位，使用snake_case命名
