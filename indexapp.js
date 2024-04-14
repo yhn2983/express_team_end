@@ -1,208 +1,84 @@
-import express, { json } from 'express'
-// import sales from "./data/sales.json" assert { type: "json" };
+import express from 'express'
+import prodRouter from './routes/products.js'
 import session from 'express-session'
 import mysql_session from 'express-mysql-session'
-import moment from 'moment-timezone'
-import dayjs from 'dayjs'
-import cors from 'cors'
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
+//import dayjs from 'dayjs'
 import db from './utils/mysql2-connect.js'
-import upload from './utils/upload-imgs.js'
-// import admin2Router from './routes/admin2.js'
-// import abRouter from './routes/adress_book.js'
+import cors from 'cors'
 import boRouter from './routes/buyer-order.js'
 import bargainRouter from './routes/bargain.js'
 import checkoutRouter from './routes/checkout.js'
 
 import evaRouter from './routes/evaluation.js'
 
-//import wsServer from "./routes/ws-chat.js";
-
+// *** 將session資料存入MySQL
 const MysqlStore = mysql_session(session)
 const sessionStore = new MysqlStore({}, db)
 
+// ***建立server
 const app = express()
 
-app.set('view engine', 'ejs') //設定使用中的樣板引擎為EJS
+// ***set設定要在路由之前, 此段是設定使用的template樣板引擎為EJS
+app.set('view engine', 'ejs')
 
-//top-level middleware
-//true:使用qs套件作為解析器的核心
-//false:使用body-parser自己的解析器(中介)
+// ***top level middlewares設定
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
+// 設定回應的擋頭, 允許跨來源
 const corsOptions = {
   credentials: true,
   origin: (origin, callback) => {
-    // console.log({ origin });
+    console.log({ origin })
+    // 沒有白名單(有在名單上才可執行), 允許所有的
     callback(null, true)
   },
 }
-app.use(cors(corsOptions))
+app.use(cors())
+// 設定session
 app.use(
   session({
     saveUninitialized: false,
     resave: false,
-    secret: 'kkdduuii', //secret內容隨便填即可
+    secret: 'eadgeagrgsdfsdf',
+    // session儲存的地方
     store: sessionStore,
-    /*
-    cookie:{
-      maxAge:20*60*1000  //單位是毫秒
-    }
-    */
   })
 )
 
-//自訂頂層的中介軟體
+// 自訂頂層的中介軟體
 app.use((req, res, next) => {
-  res.locals.title = 'MyWeb'
+  res.locals.title = 'DEAL 2ND HAND SHOP'
   res.locals.pageName = ''
-  res.locals.session = req.session //把session資料傳到ejs
+  res.locals.session = req.session
 
-  const authorization = req.get('Authorization')
-  console.log(authorization)
-  if (authorization && authorization.indexOf('Bearer ') === 0) {
-    const token = authorization.slice(7) //去掉 Bearer
-
-    //JWT 解密
-    try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET)
-      res.locals.jwt = payload //透過 res 往下傳
-    } catch (ex) {}
-  }
-
-  //測試時使用的假資料
-
-  res.locals.jwt = {
-    id: 25,
-    account: 'fake@fake.com',
-  }
-
-  next() //流程往下進行
+  next()
 })
 
-app.get('/login', (req, res) => {
-  res.render('login')
-})
+// ***設定路由(routes), 路由一定要/開頭, 否則是沒有效果的
+// Raye:
+app.use('/products', prodRouter)
 
-app.post('/login', async (req, res) => {
-  const output = {
-    success: false,
-    body: req.body,
-  }
-  const { account, password } = req.body
+// Chen:
 
-  const sql = 'SELECT * FROM members WHERE email=?'
-  const [rows] = await db.query(sql, [account])
-
-  if (!rows.length) {
-    // 帳號是錯誤的
-    return res.json(output)
-  }
-
-  const result = await bcrypt.compare(password, rows[0].password)
-  output.success = result
-  if (result) {
-    // 密碼是正確的
-
-    // 使用 session 記住用戶
-    req.session.admin = {
-      id: rows[0].id,
-      account,
-      nickname: rows[0].nickname,
-    }
-  }
-  res.json(output)
-})
-
-//登入後回傳 JWT
-app.post('/login-jwt', async (req, res) => {
-  const output = {
-    success: false,
-    body: req.body,
-  }
-  const { account, password } = req.body
-
-  const sql = 'SELECT * FROM members WHERE email=?'
-  const [rows] = await db.query(sql, [account])
-
-  if (!rows.length) {
-    // 帳號是錯誤的
-    return res.json(output)
-  }
-
-  const result = await bcrypt.compare(password, rows[0].password)
-  output.success = result
-  if (result) {
-    const token = jwt.sign(
-      {
-        id: rows[0].id,
-        account,
-      },
-      process.env.JWT_SECRET
-    )
-
-    // 使用 JWT
-    output.data = {
-      id: rows[0].id,
-      account,
-      nickname: rows[0].nickname,
-      token,
-    }
-  }
-  res.json(output)
-})
-
-app.get('/jwt-data', (req, res) => {
-  res.json(res.locals.jwt)
-})
-
-//路由(routes)設定
-//只允許GET方法來拜訪這個路徑
-app.get('/', (req, res) => {
-  res.locals.title = '首頁-' + res.locals.title
-  res.locals.pageName = ''
-  res.render('home', { name: 'Jim>"<' })
-})
-
-app.get('/try-db', async (req, res) => {
-  const sql = `SELECT  *,seller_ab.name AS seller_name, buyer_ab.name AS buyer_name FROM orders 
-     INNER JOIN address_book as seller_ab
-    ON orders.seller_id= seller_ab.id 
-    INNER JOIN address_book  as buyer_ab
-    ON orders.buyer_id=buyer_ab.id   
-    LIMIT 10 `
-  let rows = []
-
-  try {
-    [rows] = await db.query(sql)
-  } catch (ex) {
-    console.log(ex)
-  }
-
-  res.json({ rows })
-})
-
-//----訂單路由---
+// Kai:
 app.use('/buyer-order', boRouter)
 app.use('/checkout', checkoutRouter)
 app.use('/evaluation', evaRouter)
 app.use('/bargain', bargainRouter)
 
-//***路由放在此之前***
-//設定靜態內容資料夾
+// ***靜態內容***
 app.use(express.static('public'))
 app.use('/jquery', express.static('node_modules/jquery/dist'))
 app.use('/bootstrap', express.static('node_modules/bootstrap/dist'))
 
-//404頁面
-//***路由放在此之前***
+// ***製作404頁面***
 app.use((req, res) => {
-  res.status(404).send('<h2>error</h2>')
+  res.status(404).send('<h2>404 找不到頁面</h2>')
 })
 
 const port = process.env.WEB_PORT || 3002
+// ***監聽通訊埠***
 app.listen(port, () => {
-  console.log(`使用通訊埠${port}`)
+  console.log(`使用通訊埠 ${port}`)
 })

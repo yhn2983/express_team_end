@@ -15,7 +15,7 @@ const generateToken = (email = '') => {
     label: email,
     algorithm: 'SHA1',
     digits: 6,
-    period: 30,
+    period: 30, // 30s過期
     secret: OTPAuth.Secret.fromLatin1(email + otpSecret),
   })
 

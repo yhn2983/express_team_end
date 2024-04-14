@@ -1,5 +1,14 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Node artifact files
+public/imgs
+dev.env
+
+routes/important.sql
+routes/ws-chat.js
+routes/ws-draw.js
+views
+
 # dependencies
 /node_modules
 /.pnp

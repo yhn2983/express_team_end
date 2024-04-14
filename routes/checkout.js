@@ -253,8 +253,7 @@ router.post('/add', async (req, res) => {
   const [result] = await db.query(sql, [
     req.body.class,
     req.body.seller_id,
-    // req.body.buyer_id,
-    2,
+    req.body.buyer_id,
     req.body.total_price,
     req.body.total_amount,
     // req.body.shipment_fee,
