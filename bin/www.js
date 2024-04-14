@@ -6,6 +6,8 @@ import app from '../app.js'
 import debugLib from 'debug'
 import http from 'http'
 const debug = debugLib('node-express-es6:server')
+import { Server } from 'socket.io'
+import socketEvents from '##/services/socketEvents.js'
 // import { exit } from 'node:process'
 
 // 導入dotenv 使用 .env 檔案中的設定值 process.env
@@ -24,6 +26,18 @@ app.set('port', port)
 
 var server = http.createServer(app)
 
+// 建立 Socket.IO 伺服器
+const io = new Server(server, {
+  cors: {
+    origin: ['http://localhost:3000', 'https://localhost:9000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+  },
+})
+
+// 將 io 物件附加到 Express 應用程式上
+app.io = io
+socketEvents(io) // 將 io 物件傳遞給 socketEvents 函數
 /**
  * Listen on provided port, on all network interfaces.
  */
