@@ -18,11 +18,12 @@ router.post('/', async (req, res) => {
   const { product_id, buyer_id, after_bargin_price } = req.body
   const id = uuidv4()
   const sql =
-    'INSERT INTO `bargain` (  `buyer_id`, `product_id`, `after_bargin_price` ) VALUES (?,?,?)'
+    'INSERT INTO `bargain` (  `buyer_id`, `product_id`, `after_bargin_price` , `seller_id` ) VALUES (?,?,?,?)'
   const [result] = await db.query(sql, [
     req.body.buyer_id,
     req.body.product_id,
     req.body.after_bargin_price,
+    req.body.seller_id,
   ])
   // 生成唯一的 ID
   // 使用 uuidv4 生成唯一的 UUID
@@ -54,14 +55,16 @@ router.get('/seller', async (req, res) => {
 })
 
 // 获取议价请求详情
-router.get('/get/:id', (req, res) => {
+router.get('/get/:id', async (req, res) => {
   const id = req.params.id
-  const bargain = bargains.find((b) => b.id === id)
-  if (!bargain) {
-    res.status(404).json({ error: 'Bargain not found' })
-  } else {
-    res.json(bargain)
-  }
+  const sql = ` SELECT * FROM  bargain as bar  
+    INNER JOIN products as pro
+    ON pro.id = bar.product_id
+    WHERE bar.id = ${id}
+  `
+  const [rows] = await db.query(sql)
+
+  res.json({ rows })
 })
 
 // 响应议价请求

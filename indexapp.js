@@ -61,6 +61,7 @@ app.use((req, res, next) => {
   res.locals.session = req.session //把session資料傳到ejs
 
   const authorization = req.get('Authorization')
+  console.log(authorization)
   if (authorization && authorization.indexOf('Bearer ') === 0) {
     const token = authorization.slice(7) //去掉 Bearer
 
@@ -80,6 +81,41 @@ app.use((req, res, next) => {
 
   next() //流程往下進行
 })
+
+app.get('/login', (req, res) => {
+  res.render('login')
+})
+
+app.post('/login', async (req, res) => {
+  const output = {
+    success: false,
+    body: req.body,
+  }
+  const { account, password } = req.body
+
+  const sql = 'SELECT * FROM members WHERE email=?'
+  const [rows] = await db.query(sql, [account])
+
+  if (!rows.length) {
+    // 帳號是錯誤的
+    return res.json(output)
+  }
+
+  const result = await bcrypt.compare(password, rows[0].password)
+  output.success = result
+  if (result) {
+    // 密碼是正確的
+
+    // 使用 session 記住用戶
+    req.session.admin = {
+      id: rows[0].id,
+      account,
+      nickname: rows[0].nickname,
+    }
+  }
+  res.json(output)
+})
+
 //登入後回傳 JWT
 app.post('/login-jwt', async (req, res) => {
   const output = {

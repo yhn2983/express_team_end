@@ -94,7 +94,7 @@ const getOrderListData = async (req, res) => {
     ON orders_items.order_id =orders.id  
     INNER JOIN products 
      ON orders_items.product_id=products.id
-    ${where} ORDER BY orders.id  
+    ${where} ORDER BY orders.id  DESC
     LIMIT ${(page - 1) * perPage}, ${perPage}`
     ;[rows] = await db.query(sql2)
   }
