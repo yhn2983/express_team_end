@@ -8,7 +8,7 @@ import cors from 'cors'
 import boRouter from './routes/buyer-order.js'
 import bargainRouter from './routes/bargain.js'
 import checkoutRouter from './routes/checkout.js'
-
+import cookieParser from 'cookie-parser'
 import evaRouter from './routes/evaluation.js'
 
 // *** 將session資料存入MySQL
@@ -62,6 +62,7 @@ app.use('/products', prodRouter)
 // Chen:
 
 // Kai:
+app.use(cookieParser())
 app.use('/buyer-order', boRouter)
 app.use('/checkout', checkoutRouter)
 app.use('/evaluation', evaRouter)

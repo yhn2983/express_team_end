@@ -3,7 +3,7 @@ import db from './../utils/mysql2-connect.js'
 import upload from './../utils/upload-imgs.js'
 import dayjs from 'dayjs'
 import { z } from 'zod'
-
+import cookieParser from 'cookie-parser'
 /*
 我的最愛的資料庫
 SELECT ab.* , pl.sid like_sid FROM `address_book` ab
@@ -16,6 +16,7 @@ ORDER BY ab.sid DESC   LIMIT 0,25
 */
 
 const router = express.Router()
+router.use(cookieParser())
 
 const getOrderListData = async (req, res) => {
   //SELECT * FROM `address_book` WHERE `name` LIKE '%詩涵%'
@@ -36,19 +37,35 @@ const getOrderListData = async (req, res) => {
     date_end = date_end.isValid() ? date_end.format('YYYY-MM-DD') : null
   }
 
-  let qs = {} //紀錄 query string 參數
-  let subQuery = ''
-
-  if (res.locals.jwt && res.locals.jwt.id) {
-    subQuery = `(SELECT * FROM product_likes WHERE member_id=${res.locals.jwt.id}) pl`
-  }
-
+  let member_sid = 0 // 默认值为 0
   let where = ' WHERE 1 '
-  /*
-  if (res.locals.jwt && res.locals.jwt.id) {
-    //如果有jwt授權
-    where += ` AND pl.member_sid=${res.locals.jwt.id}`;
+  //检查是否存在用户会员ID的会话或cookie
+  if (req.cookies && req.cookies.auth) {
+    member_sid = req.cookies.auth.userData.id // 从 cookie 中获取会员ID
   }
+  if (member_sid) {
+    where += ` AND  buyer_ab.id=${member_sid}`
+  }
+  //使用会员ID执行查询
+  let subQuery = `
+(
+  SELECT * FROM orders WHERE buyer_ab.id=${member_sid}
+) pl `
+
+  /*
+  // let qs = {} //紀錄 query string 參數
+  // let subQuery = ''
+
+  // if (res.locals.jwt && res.locals.jwt.id) {
+  //   subQuery = `(SELECT * FROM product_likes WHERE member_id=${res.locals.jwt.id}) pl`
+  // }
+
+ 
+  // /*
+  // if (res.locals.jwt && res.locals.jwt.id) {
+  //   //如果有jwt授權
+  //   where += ` AND pl.member_sid=${res.locals.jwt.id}`;
+  // }
   */
   if (keyword) {
     //避免SQL injection
@@ -79,17 +96,23 @@ const getOrderListData = async (req, res) => {
   const [[{ totalRows }]] = await db.query(sql)
   const totalPages = Math.ceil(totalRows / perPage)
 
+  //---seller_ab.name
+  let back = `  INNER JOIN address_book as seller_ab
+ON orders.seller_id= seller_ab.id  `
+  let back2 = ` seller_ab.name AS seller_name,`
+  //----
   let rows = []
   if (totalPages > 0) {
     if (page > totalPages) {
       redirect = `?page=${totalPages}`
       return { success: false, redirect }
     }
-    const sql2 = `SELECT  *,seller_ab.name AS seller_name, buyer_ab.name AS buyer_name FROM orders 
-    INNER JOIN address_book as seller_ab
-   ON orders.seller_id= seller_ab.id 
+    const sql2 = `SELECT  *, seller_ab.name AS seller_name, buyer_ab.name AS buyer_name FROM orders 
+   
    INNER JOIN address_book  as buyer_ab
    ON orders.buyer_id=buyer_ab.id  
+   INNER JOIN address_book as seller_ab
+   ON orders.seller_id= seller_ab.id  
    INNER JOIN orders_items 
     ON orders_items.order_id =orders.id  
     INNER JOIN products 
@@ -105,7 +128,7 @@ const getOrderListData = async (req, res) => {
   })
 
   //res.json({ totalRows, perPage, totalPages, rows });
-
+  console.log(req.cookies.auth)
   return {
     totalRows,
     perPage,
@@ -148,6 +171,7 @@ router.get('/', async (req, res) => {
 
 router.get('/api', async (req, res) => {
   const data = await getOrderListData(req, res)
+  console.log(req.cookies.auth)
   res.json(data)
 })
 
@@ -188,6 +212,13 @@ router.put('/edit/:sid', async (req, res) => {
     output.error = ex.toString()
   }
   res.json(output)
+})
+
+router.get('/example', (req, res) => {
+  // 获取名为 'myCookie' 的 cookie 的值
+  const myCookieValue = req.cookies
+  res.json({ myCookieValue })
+  // 在这里使用 cookie 值进行其他操作
 })
 
 export default router
