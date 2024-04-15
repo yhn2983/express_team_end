@@ -15,6 +15,24 @@ const getListData = async (req) => {
     ` // escape本身就會加''單引號, 不需要再額外加上
   }
 
+  // sort
+  let orderby = 'ORDER BY '
+  let priceA = req.query.priceA || ''
+  let priceB = req.query.priceB || ''
+  let dateA = req.query.dateA || ''
+  let dateB = req.query.dateB || ''
+  if (priceA) {
+    orderby += `\`product_price\` ASC`
+  } else if (priceB) {
+    orderby += `\`product_price\` DESC`
+  } else if (dateA) {
+    orderby += `\`p\`.\`created_at\` ASC`
+  } else if (dateB) {
+    orderby += `\`p\`.\`created_at\` DESC`
+  } else {
+    orderby += '1'
+  }
+
   // category search
   let searchMain = req.query.searchMain || ''
   let searchSub = req.query.searchSub || ''
@@ -186,7 +204,7 @@ const getListData = async (req) => {
       redirect = `?page=${totalPages}`
       return { success: false, redirect }
     }
-    const sql2 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} ORDER BY p.id DESC LIMIT ${(page - 1) * perPage}, ${perPage}`
+    const sql2 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} ${orderby} LIMIT ${(page - 1) * perPage}, ${perPage}`
     ;[rows] = await db.query(sql2)
   }
 
@@ -203,12 +221,14 @@ const getListData = async (req) => {
   const sql4 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id where p.seller_id = 1019`
   ;[barterProds] = await db.query(sql4)
 
+  const mid = +req.query.member_id || 0
   let cartProd = []
-  const sql5 = `SELECT * FROM cart`
+  const sql5 = `SELECT * FROM cart WHERE member_id=${mid}`
   ;[cartProd] = await db.query(sql5)
 
+  const mid2 = +req.query.member_id || 0
   let likeProd = []
-  const sql6 = `SELECT * FROM products_likes`
+  const sql6 = `SELECT * FROM products_likes WHERE member_id=${mid2}`
   ;[likeProd] = await db.query(sql6)
 
   const cate = []
@@ -408,6 +428,10 @@ const getListData = async (req) => {
     totalTicket,
     totalCar,
     totalOther,
+    priceA,
+    priceB,
+    dateA,
+    dateB,
   }
 }
 
@@ -458,7 +482,7 @@ router.post('/api/:pid', async (req, res) => {
 
   const productId = req.body.product_id
   const sqlSelect = `SELECT * FROM cart WHERE product_id=?`
-  const sqlInsert = `Insert INTO cart (product_id, p_photos, p_name, p_price, p_qty, total_price, available_cp) VALUES (?, ?, ?, ?, ?, ?, ?)`
+  const sqlInsert = `Insert INTO cart (member_id, product_id, p_photos, p_name, p_price, p_qty, total_price, available_cp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   const sqlUpdate = `UPDATE cart SET p_qty =?, total_price =? WHERE product_id = ?`
 
   try {
@@ -478,6 +502,7 @@ router.post('/api/:pid', async (req, res) => {
       output.success = !!updateResult.affectedRows
     } else {
       let [insertResult] = await db.query(sqlInsert, [
+        req.body.member_id,
         req.body.product_id,
         req.body.p_photos,
         req.body.p_name,
@@ -530,8 +555,9 @@ router.put('/cart/:pid', async (req, res) => {
     res.json(output)
   } else {
     const sqlB =
-      'UPDATE cart SET product_id=?, p_qty=?, p_price=?, total_price=? WHERE id=?'
+      'UPDATE cart SET member_id=? product_id=?, p_qty=?, p_price=?, total_price=? WHERE id=?'
     const valuesB = [
+      req.body.member_id,
       req.body.product_id,
       req.body.p_qty,
       req.body.p_price,
@@ -578,7 +604,12 @@ router.get('/like-toggle/:pid', async (req, res) => {
 
 //收藏資料存入SQL
 router.post('/like-toggle/:pid', async (req, res) => {
-  const member_id = 1030 //fake
+  const member_id = req.query.member_id || 0
+  if (!member_id) {
+    output.info = '錯誤的會員編號'
+    return res.json(output)
+  }
+
   const output = {
     success: false,
     action: '',
