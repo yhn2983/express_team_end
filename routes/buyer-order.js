@@ -107,17 +107,19 @@ ON orders.seller_id= seller_ab.id  `
       redirect = `?page=${totalPages}`
       return { success: false, redirect }
     }
-    const sql2 = `SELECT  *, seller_ab.name AS seller_name, buyer_ab.name AS buyer_name FROM orders 
+    const sql2 = `SELECT  orders_items.*, o.id , o.shipment_status , o.complete_status , o.buyer_id , o. seller_id , seller_ab.name AS seller_name, buyer_ab.name AS buyer_name ,p.id as p_id  , p.product_name as product_name
+     
+    FROM orders as o  
    
    INNER JOIN address_book  as buyer_ab
-   ON orders.buyer_id=buyer_ab.id  
+   ON o.buyer_id=buyer_ab.id  
    INNER JOIN address_book as seller_ab
-   ON orders.seller_id= seller_ab.id  
+   ON o.seller_id= seller_ab.id  
    INNER JOIN orders_items 
-    ON orders_items.order_id =orders.id  
-    INNER JOIN products 
-     ON orders_items.product_id=products.id
-    ${where} ORDER BY orders.id  DESC
+    ON orders_items.order_id =o.id  
+    INNER JOIN products as p 
+     ON orders_items.product_id=p.id
+    ${where} ORDER BY o.id  DESC
     LIMIT ${(page - 1) * perPage}, ${perPage}`
     ;[rows] = await db.query(sql2)
   }
@@ -175,7 +177,14 @@ router.get('/api', async (req, res) => {
   res.json(data)
 })
 
-router.put('/edit/:sid', async (req, res) => {
+//order-list detail
+router.get('/api/:id', async (req, res) => {
+  const data = await getOrderListData(req, res)
+  console.log(req.cookies.auth)
+  res.json(data)
+})
+
+router.put('/edit/:id', async (req, res) => {
   const output = {
     success: false,
     postData: req.body,

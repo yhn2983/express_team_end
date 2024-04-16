@@ -53,11 +53,35 @@ router.get('/seller', async (req, res) => {
 
   res.json({ rows })
 })
+router.get('/buyer', async (req, res) => {
+  const sql = `SELECT *,bargain.id FROM bargain 
+  INNER JOIN products 
+    ON  products.id= bargain.product_id
+    INNER JOIN address_book 
+    ON  address_book.id= bargain.seller_id
+  `
+  const [rows] = await db.query(sql)
+
+  res.json({ rows })
+})
+router.delete('/buyer/:id', async (req, res) => {
+  const id = +req.params.id || 0
+  if (id === 0) {
+    return res.json({
+      success: false,
+      info: '無效的參數',
+    })
+  }
+
+  const sql = `DELETE FROM bargain WHERE id=?`
+  const [result] = await db.query(sql, [id])
+  res.json(result)
+})
 
 // 获取议价请求详情
 router.get('/get/:id', async (req, res) => {
   const id = req.params.id
-  const sql = ` SELECT * FROM  bargain as bar  
+  const sql = ` SELECT *, bar.id  FROM  bargain as bar  
     INNER JOIN products as pro
     ON pro.id = bar.product_id
     WHERE bar.id = ${id}
