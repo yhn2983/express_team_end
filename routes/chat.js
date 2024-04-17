@@ -17,6 +17,10 @@ router.post('/', (req, res) => {
 router.post('/rooms', async (req, res) => {
   const { user1_id, user2_id } = req.body
 
+  // 檢查 user1_id 和 user2_id 是否相同
+  if (user1_id === user2_id) {
+    return res.json({ status: 'error', message: '不能跟自己對話!' })
+  }
   try {
     // 檢查是否已經存在相同的聊天室
     let room = await Room.findOne({
