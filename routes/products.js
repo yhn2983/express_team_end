@@ -1,8 +1,38 @@
 import express from 'express'
 import db from './../utils/mysql2-connect.js'
 import dayjs from 'dayjs'
+import nodemailer from 'nodemailer'
 
 const router = express.Router()
+
+router.post('/sendEmail', async (req, res) => {
+  const { name, email, subject, message } = req.body
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.example.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: 'your_email@example.com',
+      pass: 'your_email_password',
+    },
+  })
+
+  const mailOptions = {
+    from: 'your_email@example.com',
+    to: 'recipient@example.com',
+    subject: subject,
+    text: `From: ${name} (${email})\n\n${message}`,
+  }
+
+  try {
+    await transporter.sendMail(mailOptions)
+    console.log('郵件發送成功！')
+    res.status(200).send('郵件發送成功!')
+  } catch (e) {
+    console.error('郵件發送失敗', e)
+    res.status(500).send('郵件發送失敗，請稍後再試')
+  }
+})
 
 const getListData = async (req) => {
   let keyword = req.query.keyword || ''
@@ -799,25 +829,6 @@ router.post('/order-barter', async (req, res) => {
   }
 
   res.json(output)
-})
-
-router.get('/order-barter', async (req, res) => {
-  const sql = `SELECT ob.*, obi.order_id, obi.product_id_1 p1_id, obi.product_id_2 p2_id, obi.qty_m1, obi.qty_m2, obi.cps_available_m1 cp1, obi.cps_available_m2 cp2, p1.product_photos p1_photos, p2.product_photos p2_photos, p1.product_name p1_name, p2.product_name p2_name, ab1.nickname m1_nickname, ab2.nickname m2_nickname, ab1.name m1_name, ab2.name m2_name, ab1.mobile m1_mobile, ab2.mobile m2_mobile
-  FROM orders_barter ob
-  JOIN orders_barter_items obi ON ob.id = obi.order_id
-  JOIN products p1 ON obi.product_id_1 = p1.id
-  JOIN products p2 ON obi.product_id_2 = p2.id
-  JOIN address_book ab1 ON p1.seller_id = ab1.id
-  JOIN address_book ab2 ON p2.seller_id = ab2.id`
-  const [rows] = await db.query(sql)
-  if (!rows.length) {
-    return res.json({ success: false })
-  }
-  const r = rows[0]
-  const d_o = dayjs(r.order_date)
-  r.order_date = d_o.isValid() ? d_o.format('YYYY-MM-DD') : ''
-
-  res.json({ success: true, data: r })
 })
 
 // 以物易物訂單資料
