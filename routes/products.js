@@ -219,6 +219,54 @@ const getListData = async (req) => {
     }
   }
 
+  //商品計數
+  //  商品總數
+  let totalCount = [[{}]]
+  const sqlTotal = `SELECT COUNT(*) as totalCount FROM products`
+  ;[[{ totalCount }]] = await db.query(sqlTotal)
+  //  商品價格區間計數
+  let priceRangeA = [[{}]]
+  const sqlPriceRangeA = `SELECT COUNT(*) AS priceRangeA FROM products WHERE product_price BETWEEN 0 AND 500`
+  ;[[{ priceRangeA }]] = await db.query(sqlPriceRangeA)
+  let priceRangeB = [[{}]]
+  const sqlPriceRangeB = `SELECT COUNT(*) AS priceRangeB FROM products WHERE product_price BETWEEN 501 AND 1000`
+  ;[[{ priceRangeB }]] = await db.query(sqlPriceRangeB)
+  let priceRangeC = [[{}]]
+  const sqlPriceRangeC = `SELECT COUNT(*) AS priceRangeC FROM products WHERE product_price BETWEEN 1001 AND 3000`
+  ;[[{ priceRangeC }]] = await db.query(sqlPriceRangeC)
+  let priceRangeD = [[{}]]
+  const sqlPriceRangeD = `SELECT COUNT(*) AS priceRangeD FROM products WHERE product_price BETWEEN 3001 AND 5000`
+  ;[[{ priceRangeD }]] = await db.query(sqlPriceRangeD)
+  let priceRangeE = [[{}]]
+  const sqlPriceRangeE = `SELECT COUNT(*) AS priceRangeE FROM products WHERE product_price > 5001`
+  ;[[{ priceRangeE }]] = await db.query(sqlPriceRangeE)
+  //  商品狀態計數
+  let prodStatusA = [[{}]]
+  const sqlProdStatusA = `SELECT COUNT(*) AS prodStatusA FROM products WHERE product_status = 1`
+  ;[[{ prodStatusA }]] = await db.query(sqlProdStatusA)
+  let prodStatusB = [[{}]]
+  const sqlProdStatusB = `SELECT COUNT(*) AS prodStatusB FROM products WHERE product_status = 2`
+  ;[[{ prodStatusB }]] = await db.query(sqlProdStatusB)
+  //  上架時間計數
+  let dateRangeA = [[{}]]
+  const sqlDateRangeA = `SELECT COUNT(*) AS dateRangeA FROM products WHERE created_at BETWEEN '2010-01-01' AND '2012-12-31'`
+  ;[[{ dateRangeA }]] = await db.query(sqlDateRangeA)
+  let dateRangeB = [[{}]]
+  const sqlDateRangeB = `SELECT COUNT(*) AS dateRangeB FROM products WHERE created_at BETWEEN '2013-01-01' AND '2015-12-31'`
+  ;[[{ dateRangeB }]] = await db.query(sqlDateRangeB)
+  let dateRangeC = [[{}]]
+  const sqlDateRangeC = `SELECT COUNT(*) AS dateRangeC FROM products WHERE created_at BETWEEN '2016-01-01' AND '2018-12-31'`
+  ;[[{ dateRangeC }]] = await db.query(sqlDateRangeC)
+  let dateRangeD = [[{}]]
+  const sqlDateRangeD = `SELECT COUNT(*) AS dateRangeD FROM products WHERE created_at BETWEEN '2019-01-01' AND '2021-12-31'`
+  ;[[{ dateRangeD }]] = await db.query(sqlDateRangeD)
+  let dateRangeE = [[{}]]
+  const sqlDateRangeE = `SELECT COUNT(*) AS dateRangeE FROM products WHERE created_at BETWEEN '2022-01-01' AND '2023-12-31'`
+  ;[[{ dateRangeE }]] = await db.query(sqlDateRangeE)
+  let dateRangeF = [[{}]]
+  const sqlDateRangeF = `SELECT COUNT(*) AS dateRangeF FROM products WHERE created_at BETWEEN '2024-01-01' AND '2024-12-31'`
+  ;[[{ dateRangeF }]] = await db.query(sqlDateRangeF)
+
   // 單純回應資料
   return {
     success: true,
@@ -250,6 +298,20 @@ const getListData = async (req) => {
     searchDateF,
     searchDateStart,
     searchDateEnd,
+    totalCount,
+    priceRangeA,
+    priceRangeB,
+    priceRangeC,
+    priceRangeD,
+    priceRangeE,
+    prodStatusA,
+    prodStatusB,
+    dateRangeA,
+    dateRangeB,
+    dateRangeC,
+    dateRangeD,
+    dateRangeE,
+    dateRangeF,
   }
 }
 
@@ -285,49 +347,110 @@ router.get('/api', async (req, res) => {
   res.json(data)
 })
 
-// 刪除路由
-router.delete('/:product_id', async (req, res) => {
-  const id = +req.params.product_id || 0
-  if (id === 0) {
-    return res.json({
-      success: false,
-      info: '無效的參數',
-    })
+router.get('/api/:pid', async (req, res) => {
+  const pid = +req.params.pid || 0
+  if (!pid) {
+    return res.json({ success: false })
   }
+  const sql = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id WHERE p.id=${pid}`
+  const [rows] = await db.query(sql)
+  if (!rows.length) {
+    return res.json({ success: false })
+  }
+  const r = rows[0]
+  const d_c = dayjs(r.created_at)
+  const d_e = dayjs(r.edit_at)
+  r.created_at = d_c.isValid() ? d_c.format('YYYY-MM-DD') : ''
+  r.edit_at = d_e.isValid() ? d_e.format('YYYY-MM-DD') : ''
 
-  const sql = `DELETE FROM products WHERE id=?`
-  const [result] = await db.query(sql, [id])
-  res.json(result)
+  res.json({ success: true, data: r })
 })
 
-// 購物車新增路由
-// 處理新增資料的表單
-router.post('/add', upload.none(), async (req, res) => {
-  const output = {
-    success: false,
-    postData: req.body,
-    error: '',
-    code: 0,
-  }
+// // 收藏功能
+// router.get('/like-toggle/:pid', async (req, res) => {
+//   const member_id = 20 //測試的假資料
+//   const output = {
+//     success: false,
+//     action: '',
+//     info: '',
+//   }
 
-  const sql =
-    'INSERT INTO `cart` (product_photos, product_price, product_qty, total_price, available_cp) VALUES (?, ?, ?, ?, ?)'
+//   const pid = +req.params.pid || 0
+//   if (!pid) {
+//     output.info = '錯誤的商品編號'
+//     return res.json(output)
+//   }
 
-  try {
-    const [result] = await db.query(sql, [
-      req.body.product_photos,
-      req.body.product_price,
-      req.body.product_qty,
-      req.body.total_price,
-      req.body.available_cp,
-    ])
-    output.success = !!result.affectedRows
-  } catch (ex) {
-    output.error = ex.toString()
-  }
+//   //判斷是否有該項商品
+//   const p_sql = `SELECT id FROM products WHERE id=?`
+//   const [p_rows] = await db.query(p_sql, [pid])
+//   if (!p_rows.length) {
+//     output.info = '沒有該商品'
+//     return res.json(output)
+//   }
+//   const sql = `SELECT * FROM product_likes WHERE product_id=? AND member_id=?`
+//   const [rows] = await db.query(sql, [pid, member_id])
 
-  res.json(output)
-})
+//   if (rows.length) {
+//     //有資料的話就移除
+//     output.action = 'remove'
+//     const [result] = await db.query(
+//       `DELETE FROM product_likes WHERE id=${rows[0].id}`
+//     )
+//     output.success = !!result.affectedRows
+//   } else {
+//     // 沒有資料的話就加入
+//     output.action = 'add'
+//     const sql = `INSERT INTO product_likes (product_id, member_id) VALUES (?, ?) `
+//     const [result] = await db.query(sql, [pid, member_id])
+//     output.success = !!result.affectedRows
+//   }
+//   res.json(output)
+// })
+
+// // 刪除路由
+// router.delete('/:product_id', async (req, res) => {
+//   const id = +req.params.product_id || 0
+//   if (id === 0) {
+//     return res.json({
+//       success: false,
+//       info: '無效的參數',
+//     })
+//   }
+
+//   const sql = `DELETE FROM products WHERE id=?`
+//   const [result] = await db.query(sql, [id])
+//   res.json(result)
+// })
+
+// // 購物車新增路由
+// // 處理新增資料的表單
+// router.post('/add', upload.none(), async (req, res) => {
+//   const output = {
+//     success: false,
+//     postData: req.body,
+//     error: '',
+//     code: 0,
+//   }
+
+//   const sql =
+//     'INSERT INTO `cart` (product_photos, product_price, product_qty, total_price, available_cp) VALUES (?, ?, ?, ?, ?)'
+
+//   try {
+//     const [result] = await db.query(sql, [
+//       req.body.product_photos,
+//       req.body.product_price,
+//       req.body.product_qty,
+//       req.body.total_price,
+//       req.body.available_cp,
+//     ])
+//     output.success = !!result.affectedRows
+//   } catch (ex) {
+//     output.error = ex.toString()
+//   }
+
+//   res.json(output)
+// })
 
 // // 新增路由
 // router.get('/add', upload.single('photo'), async (req, res) => {
@@ -391,79 +514,11 @@ router.post('/add', upload.none(), async (req, res) => {
 //   res.json(req.body)
 // })
 
-// router.get('/statistics', async (req, res) => {
+//router.get('/statistics', async (req, res) => {
 //   res.locals.title = '商品管理統計圖表'
 //   res.locals.pageName = 'prod_statistics'
-
-//   try {
-//     // 計算會員各地區筆數
-//     const [rows1] = await db.query(
-//       'SELECT COUNT(*) as productsCount FROM products'
-//     )
-//     res.locals.productsCount = rows1[0].productsCount
-
-//     const [rows2] = await db.query(
-//       'SELECT COUNT(*) as man FROM products WHERE main_category = 4'
-//     )
-//     res.locals.man = rows2[0].man
-
-//     const [rows3] = await db.query(
-//       'SELECT COUNT(*) as woman FROM products WHERE main_category = 5'
-//     )
-//     res.locals.woman = rows3[0].woman
-
-//     const [rows4] = await db.query(
-//       'SELECT COUNT(*) as beauty FROM products WHERE main_category = 6'
-//     )
-//     res.locals.beauty = rows4[0].beauty
-
-//     const [rows5] = await db.query(
-//       'SELECT COUNT(*) as home FROM products WHERE main_category = 11'
-//     )
-//     res.locals.home = rows5[0].home
-
-//     const [rows6] = await db.query(
-//       'SELECT COUNT(*) as baby FROM products WHERE main_category = 13'
-//     )
-//     res.locals.baby = rows6[0].baby
-
-//     const [rows7] = await db.query(
-//       'SELECT COUNT(*) as pet FROM products WHERE main_category = 17'
-//     )
-//     res.locals.pet = rows7[0].pet
-
-//     const [rows8] = await db.query(
-//       "SELECT COUNT(*) FROM products AS one WHERE created_at BETWEEN '2022-01-01' AND '2022-06-30'"
-//     )
-//     res.locals.one = rows8[0].one
-
-//     const [rows9] = await db.query(
-//       "SELECT COUNT(*) FROM products AS two WHERE created_at BETWEEN '2022-07-01' AND '2022-12-31'"
-//     )
-//     res.locals.two = rows9[0].two
-
-//     const [rows10] = await db.query(
-//       "SELECT COUNT(*) FROM products AS three WHERE created_at BETWEEN '2023-01-01' AND '2023-06-30'"
-//     )
-//     res.locals.three = rows10[0].three
-
-//     const [rows11] = await db.query(
-//       "SELECT COUNT(*) FROM products AS four WHERE created_at BETWEEN '2023-07-01' AND '2023-12-31'"
-//     )
-//     res.locals.four = rows11[0].four
-
-//     const [rows12] = await db.query(
-//       "SELECT COUNT(*) FROM products AS five WHERE created_at BETWEEN '2024-01-01' AND '2024-06-30'"
-//     )
-//     res.locals.five = rows12[0].five
-
-//     res.render('products/statistics')
-//   } catch (ex) {
-//     console.error(ex)
-//     res.render('error', {
-//       message: '內容似乎出錯了!',
-//     })
-//   }
+//   const data = await getListData(req)
+//   res.json(data)
 // })
 
 export default router
