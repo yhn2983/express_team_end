@@ -17,17 +17,16 @@ const getListData = async (req) => {
 
   // sort
   let orderby = 'ORDER BY '
-  let priceA = req.query.priceA || ''
-  let priceB = req.query.priceB || ''
-  let dateA = req.query.dateA || ''
-  let dateB = req.query.dateB || ''
-  if (priceA) {
+  let priceOrder = req.query.priceOrder || ''
+  let dateOrder = req.query.dateOrder || ''
+  let dateSortDESC = req.query.dateSortDESC || ''
+  if (priceOrder == 'priceSortASC') {
     orderby += `\`product_price\` ASC`
-  } else if (priceB) {
+  } else if (priceOrder == 'priceSortDESC') {
     orderby += `\`product_price\` DESC`
-  } else if (dateA) {
+  } else if (dateOrder == 'dateSortASC') {
     orderby += `\`p\`.\`created_at\` ASC`
-  } else if (dateB) {
+  } else if (dateOrder == 'dateSortDESC') {
     orderby += `\`p\`.\`created_at\` DESC`
   } else {
     orderby += '1'
@@ -218,7 +217,7 @@ const getListData = async (req) => {
   ;[rowsRandom] = await db.query(sql3)
 
   let barterProds = []
-  const sql4 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id where p.seller_id = 1019`
+  const sql4 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id where p.seller_id=2`
   ;[barterProds] = await db.query(sql4)
 
   const mid = +req.query.member_id || 0
@@ -230,6 +229,15 @@ const getListData = async (req) => {
   let likeProd = []
   const sql6 = `SELECT * FROM products_likes WHERE member_id=${mid2}`
   ;[likeProd] = await db.query(sql6)
+
+  const mid3 = +req.query.member_id || 0
+  let barter = []
+  const sql7 = `SELECT b.*, ab2.nickname m2_nickname, p2.product_name p2_name, ab.nickname m1_nickname, p1.product_name p1_name FROM barter b JOIN address_book ab2 ON b.m2_id = ab2.id JOIN products p2 ON b.p2_id = p2.id JOIN address_book ab ON b.m1_id = ab.id JOIN products p1 ON b.p1_id = p1.id WHERE m1_id=${mid3} OR m2_id=${mid3} ORDER BY b.id DESC`
+  ;[barter] = await db.query(sql7)
+
+  barter.forEach((item) => {
+    item.created_at = dayjs(item.created_at).format('YYYYMMDD')
+  })
 
   const cate = []
   const [cateRows] = await db.query('SELECT * FROM categories')
@@ -428,10 +436,9 @@ const getListData = async (req) => {
     totalTicket,
     totalCar,
     totalOther,
-    priceA,
-    priceB,
-    dateA,
-    dateB,
+    priceOrder,
+    dateOrder,
+    barter,
   }
 }
 
@@ -669,6 +676,231 @@ router.delete('/like-toggle/:pid', async (req, res) => {
   const sql = `DELETE FROM products_likes WHERE product_id=?`
   const [result] = await db.query(sql, [pid])
   res.json(result)
+})
+
+//以物易物資料存入SQL
+router.post('/barter', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+
+  const sql =
+    'INSERT INTO `barter` (p1_id, p2_id, photo1, photo2, m1_id, m2_id, cp1, cp2, status_reply, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())'
+
+  try {
+    let [result] = await db.query(sql, [
+      req.body.p1_id,
+      req.body.p2_id,
+      req.body.photo1,
+      req.body.photo2,
+      req.body.m1_id,
+      req.body.m2_id,
+      req.body.cp1,
+      req.body.cp2,
+    ])
+    output.success = !!result.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  res.json(output)
+})
+
+// 更新以物易物 : agree
+router.put('/barter/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const sql =
+    'UPDATE barter SET status_reply=?, status_approve=?, approve=? WHERE id=?'
+  const values = [
+    req.body.status_reply,
+    req.body.status_approve,
+    req.body.approve,
+    id,
+  ]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
+// 更新以物易物 : decline
+router.put('/barter2/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const sql =
+    'UPDATE barter SET status_reply=?, status_approve=?, approve=? WHERE id=?'
+  const values = [
+    req.body.status_reply,
+    req.body.status_approve,
+    req.body.approve,
+    id,
+  ]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
+//以物易物訂單資料存入SQL
+router.post('/order-barter', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+
+  const sql =
+    'INSERT INTO `orders_barter` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, shipment_status_m1, shipment_status_m2, order_date, complete_status) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, 1, 1, NOW(), 1)'
+
+  try {
+    let [result] = await db.query(sql, [
+      req.body.id,
+      req.body.m1_id,
+      req.body.m2_id,
+    ])
+    output.success = !!result.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  const sql2 =
+    'INSERT INTO `orders_barter_items` (order_id, product_id_1, product_id_2, qty_m1, qty_m2, cps_available_m1, cps_available_m2) VALUES (?, ?, ?, 1, 1, ?, ?)'
+
+  try {
+    let [result2] = await db.query(sql2, [
+      req.body.id,
+      req.body.p1_id,
+      req.body.p2_id,
+      req.body.cp1,
+      req.body.cp2,
+    ])
+    output.success = !!result2.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  res.json(output)
+})
+
+// 以物易物訂單資料
+router.get('/order-barter/:id', async (req, res) => {
+  const id = +req.params.id || 0
+  if (!id) {
+    return res.json({ success: false })
+  }
+  const sql = `SELECT ob.*, obi.order_id, obi.product_id_1 p1_id, obi.product_id_2 p2_id, obi.qty_m1, obi.qty_m2, obi.cps_available_m1 cp1, obi.cps_available_m2 cp2, p1.product_photos p1_photos, p2.product_photos p2_photos, p1.product_name p1_name, p2.product_name p2_name, ab1.nickname m1_nickname, ab2.nickname m2_nickname, ab1.name m1_name, ab2.name m2_name, ab1.mobile m1_mobile, ab2.mobile m2_mobile
+  FROM orders_barter ob
+  JOIN orders_barter_items obi ON ob.id = obi.order_id
+  JOIN products p1 ON obi.product_id_1 = p1.id
+  JOIN products p2 ON obi.product_id_2 = p2.id
+  JOIN address_book ab1 ON p1.seller_id = ab1.id
+  JOIN address_book ab2 ON p2.seller_id = ab2.id WHERE ob.id=${id}`
+  const [rows] = await db.query(sql)
+  if (!rows.length) {
+    return res.json({ success: false })
+  }
+  const r = rows[0]
+  const d_o = dayjs(r.order_date)
+  r.order_date = d_o.isValid() ? d_o.format('YYYY-MM-DD') : ''
+
+  res.json({ success: true, data: r })
+})
+
+// 更新以物易物訂單資料
+router.put('/order-barter/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  if (id) {
+    const sqlA = 'UPDATE cart SET p_qty=?, total_price=? WHERE id=?'
+    const valuesA = [req.body.p_qty, req.body.total_price, id]
+
+    const [result] = await db.query(sqlA, valuesA)
+
+    output.success = !!(result.affectedRows && result.changedRows)
+    res.json(output)
+  } else {
+    const sqlB =
+      'UPDATE cart SET member_id=? product_id=?, p_qty=?, p_price=?, total_price=? WHERE id=?'
+    const valuesB = [
+      req.body.member_id,
+      req.body.product_id,
+      req.body.p_qty,
+      req.body.p_price,
+      req.body.total_price,
+      id,
+    ]
+    const [result] = await db.query(sqlB, valuesB)
+
+    output.success = !!(result.affectedRows && result.changedRows)
+    res.json(output)
+  }
+})
+
+//以物易物訂單資料存入SQL
+router.post('/order', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+
+  const sql =
+    'INSERT INTO `orders` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, shipment_status_m1, shipment_status_m2, order_date, complete_status) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, 1, 1, NOW(), 1)'
+
+  try {
+    let [result] = await db.query(sql, [
+      req.body.id,
+      req.body.m1_id,
+      req.body.m2_id,
+    ])
+    output.success = !!result.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  const sql2 =
+    'INSERT INTO `orders_items` (order_id, product_id_1, product_id_2, qty_m1, qty_m2, cps_available_m1, cps_available_m2) VALUES (?, ?, ?, 1, 1, ?, ?)'
+
+  try {
+    let [result2] = await db.query(sql2, [
+      req.body.id,
+      req.body.p1_id,
+      req.body.p2_id,
+      req.body.cp1,
+      req.body.cp2,
+    ])
+    output.success = !!result2.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  res.json(output)
 })
 
 export default router
