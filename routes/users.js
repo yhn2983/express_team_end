@@ -71,6 +71,24 @@ router.get('/:id', authenticate, async function (req, res) {
   return res.json({ status: 'success', data: { user } })
 })
 
+// GET - 得到單筆資料不是該會員的(注意，有動態參數時要寫在GET區段最後面)
+router.get('/other/:id', async function (req, res, next) {
+  try {
+    // 轉為數字
+    const id = getIdParam(req)
+
+    const otherUser = await Member.findByPk(id, {
+      raw: true, // 只需要資料表中資料
+      attributes: ['id', 'nickname', 'photo'], // 只回傳 id, nickname, 和 photo
+    })
+
+    return res.json({ status: 'success', data: { otherUser } })
+  } catch (error) {
+    // 如果 getIdParam 拋出錯誤，我們將錯誤傳遞給下一個中間件
+    next(error)
+  }
+})
+
 // POST - 新增會員資料
 router.post('/', async function (req, res) {
   // req.body資料範例
