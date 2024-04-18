@@ -19,7 +19,6 @@ const getListData = async (req) => {
   let orderby = 'ORDER BY '
   let priceOrder = req.query.priceOrder || ''
   let dateOrder = req.query.dateOrder || ''
-  let dateSortDESC = req.query.dateSortDESC || ''
   if (priceOrder == 'priceSortASC') {
     orderby += `\`product_price\` ASC`
   } else if (priceOrder == 'priceSortDESC') {
@@ -216,8 +215,9 @@ const getListData = async (req) => {
   const sql3 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} ORDER BY RAND()`
   ;[rowsRandom] = await db.query(sql3)
 
+  const mid4 = +req.query.member_id || 0
   let barterProds = []
-  const sql4 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id where p.seller_id=2`
+  const sql4 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id where p.seller_id=${mid4}`
   ;[barterProds] = await db.query(sql4)
 
   const mid = +req.query.member_id || 0
@@ -688,7 +688,7 @@ router.post('/barter', async (req, res) => {
   }
 
   const sql =
-    'INSERT INTO `barter` (p1_id, p2_id, photo1, photo2, m1_id, m2_id, cp1, cp2, status_reply, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())'
+    'INSERT INTO `barter` (p1_id, p2_id, photo1, photo2, m1_id, m2_id, cp1, cp2, status_reply, status_approve, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW())'
 
   try {
     let [result] = await db.query(sql, [
@@ -759,7 +759,7 @@ router.put('/barter2/:id', async (req, res) => {
   res.json(output)
 })
 
-//以物易物訂單資料存入SQL
+//以物易物邀請存入訂單資料存入SQL
 router.post('/order-barter', async (req, res) => {
   const output = {
     success: false,
@@ -769,7 +769,7 @@ router.post('/order-barter', async (req, res) => {
   }
 
   const sql =
-    'INSERT INTO `orders_barter` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, shipment_status_m1, shipment_status_m2, order_date, complete_status) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, 1, 1, NOW(), 1)'
+    'INSERT INTO `orders_barter` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, order_date, complete_status) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, NOW(), 1)'
 
   try {
     let [result] = await db.query(sql, [
@@ -799,6 +799,25 @@ router.post('/order-barter', async (req, res) => {
   }
 
   res.json(output)
+})
+
+router.get('/order-barter', async (req, res) => {
+  const sql = `SELECT ob.*, obi.order_id, obi.product_id_1 p1_id, obi.product_id_2 p2_id, obi.qty_m1, obi.qty_m2, obi.cps_available_m1 cp1, obi.cps_available_m2 cp2, p1.product_photos p1_photos, p2.product_photos p2_photos, p1.product_name p1_name, p2.product_name p2_name, ab1.nickname m1_nickname, ab2.nickname m2_nickname, ab1.name m1_name, ab2.name m2_name, ab1.mobile m1_mobile, ab2.mobile m2_mobile
+  FROM orders_barter ob
+  JOIN orders_barter_items obi ON ob.id = obi.order_id
+  JOIN products p1 ON obi.product_id_1 = p1.id
+  JOIN products p2 ON obi.product_id_2 = p2.id
+  JOIN address_book ab1 ON p1.seller_id = ab1.id
+  JOIN address_book ab2 ON p2.seller_id = ab2.id`
+  const [rows] = await db.query(sql)
+  if (!rows.length) {
+    return res.json({ success: false })
+  }
+  const r = rows[0]
+  const d_o = dayjs(r.order_date)
+  r.order_date = d_o.isValid() ? d_o.format('YYYY-MM-DD') : ''
+
+  res.json({ success: true, data: r })
 })
 
 // 以物易物訂單資料
