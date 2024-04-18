@@ -8,8 +8,6 @@ import path from 'path'
 import session from 'express-session'
 import './indexapp.js'
 
-import './indexapp.js'
-
 // 使用檔案的session store，存在sessions資料夾
 import sessionFileStore from 'session-file-store'
 const FileStore = sessionFileStore(session)
