@@ -156,9 +156,9 @@ router.get('/api', async (req, res) => {
 
 //----- 新增資料
 //呈現新增表單
-router.get('/add', async (req, res) => {
-  res.render('buyer-orders/add')
-})
+// router.get('/add', async (req, res) => {
+//   res.render('buyer-orders/add')
+// })
 
 //處理新增表單
 router.post('/add/multi', async (req, res) => {
@@ -240,7 +240,28 @@ router.get('/product-api', async (req, res) => {
   }
 })
 
-//
+//取得購物車的商品資料
+router.get('/product-api-shop', async (req, res) => {
+  try {
+    let reqId = req.query.shopId || ''
+    // 如果有缓存的产品 ID，则使用缓存的 ID
+    if (reqId !== null) {
+      // 2. 构建 SQL 查询语句
+      const sql = `SELECT id, seller_id, product_name, product_price
+                 FROM products
+                 WHERE id = ?` // 使用占位符以防止 SQL 注入攻击
+
+      // 3. 执行查询
+      const [rows] = await db.query(sql, [reqId])
+
+      // 4. 返回查询结果
+      res.json({ rows })
+    }
+  } catch (error) {
+    console.error('Error fetching product:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
 
 // form from next buyer-orders
 router.get('/add', async (req, res) => {
@@ -256,8 +277,7 @@ router.post('/add', async (req, res) => {
     req.body.buyer_id,
     req.body.total_price,
     req.body.total_amount,
-    // req.body.shipment_fee,
-    0,
+    req.body.shipment_fee,
     // req.body.payment_status,
     1,
     req.body.payment_way,

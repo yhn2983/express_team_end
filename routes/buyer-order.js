@@ -36,21 +36,26 @@ const getOrderListData = async (req, res) => {
     //如果是合法的日期格，就轉換成日期的字串，否則設定為空值
     date_end = date_end.isValid() ? date_end.format('YYYY-MM-DD') : null
   }
-
-  let member_sid = 0 // 默认值为 0
+  let whereMain = ' WHERE 1 '
   let where = ' WHERE 1 '
-  //检查是否存在用户会员ID的会话或cookie
-  if (req.cookies && req.cookies.auth) {
-    member_sid = req.cookies.auth.userData.id // 从 cookie 中获取会员ID
+
+  let memberId = req.query.id || ''
+  if (memberId) {
+    whereMain += ` AND  o.buyer_id=${memberId}`
   }
-  if (member_sid) {
-    where += ` AND  buyer_ab.id=${member_sid}`
-  }
+
+  // //检查是否存在用户会员ID的会话或cookie
+  // if (req.cookies && req.cookies.auth) {
+  //   member_sid = req.cookies.auth.userData.id // 从 cookie 中获取会员ID
+  // }
+  // if (member_sid) {
+  //   where += ` AND  buyer_ab.id=${member_sid}`
+  // }
   //使用会员ID执行查询
-  let subQuery = `
-(
-  SELECT * FROM orders WHERE buyer_ab.id=${member_sid}
-) pl `
+  //   let subQuery = `
+  // (
+  //   SELECT * FROM orders WHERE buyer_ab.id=${member_sid}
+  // ) pl `
 
   /*
   // let qs = {} //紀錄 query string 參數
@@ -67,11 +72,11 @@ const getOrderListData = async (req, res) => {
   //   where += ` AND pl.member_sid=${res.locals.jwt.id}`;
   // }
   */
-  if (keyword) {
-    //避免SQL injection
-    where += ` AND ( ab.\`name\` LIKE ${db.escape('%' + keyword + '%')}) OR 
-    ( ab.\`mobile\` LIKE ${db.escape('%' + keyword + '%')})`
-  }
+  // if (keyword) {
+  //   //避免SQL injection
+  //   where += ` AND ( ab.\`name\` LIKE ${db.escape('%' + keyword + '%')}) OR
+  //   ( ab.\`mobile\` LIKE ${db.escape('%' + keyword + '%')})`
+  // }
 
   //如果用戶有設定篩選生日起始時間
   if (date_begin) {
@@ -96,18 +101,13 @@ const getOrderListData = async (req, res) => {
   const [[{ totalRows }]] = await db.query(sql)
   const totalPages = Math.ceil(totalRows / perPage)
 
-  //---seller_ab.name
-  let back = `  INNER JOIN address_book as seller_ab
-ON orders.seller_id= seller_ab.id  `
-  let back2 = ` seller_ab.name AS seller_name,`
-  //----
   let rows = []
   if (totalPages > 0) {
     if (page > totalPages) {
       redirect = `?page=${totalPages}`
       return { success: false, redirect }
     }
-    const sql2 = `SELECT  orders_items.*, o.id , o.shipment_status , o.complete_status , o.buyer_id , o. seller_id , seller_ab.name AS seller_name, buyer_ab.name AS buyer_name ,p.id as p_id  , p.product_name as product_name
+    const sql2 = `SELECT   o.id , o.shipment_status , o.complete_status , o.buyer_id , o. seller_id , o.total_price , o.order_date , seller_ab.nickname  AS seller_name, buyer_ab.name AS buyer_name , buyer_ab.carbon_points_got as buyer_point , p.id as p_id  , p.product_name as product_name , p.product_photos as product_photos
      
     FROM orders as o  
    
@@ -119,7 +119,7 @@ ON orders.seller_id= seller_ab.id  `
     ON orders_items.order_id =o.id  
     INNER JOIN products as p 
      ON orders_items.product_id=p.id
-    ${where} ORDER BY o.id  DESC
+    ${whereMain} ORDER BY o.id  DESC
     LIMIT ${(page - 1) * perPage}, ${perPage}`
     ;[rows] = await db.query(sql2)
   }
@@ -130,7 +130,7 @@ ON orders.seller_id= seller_ab.id  `
   })
 
   //res.json({ totalRows, perPage, totalPages, rows });
-  console.log(req.cookies.auth)
+
   return {
     totalRows,
     perPage,
@@ -173,7 +173,7 @@ router.get('/', async (req, res) => {
 
 router.get('/api', async (req, res) => {
   const data = await getOrderListData(req, res)
-  console.log(req.cookies.auth)
+
   res.json(data)
 })
 
