@@ -933,4 +933,44 @@ router.post('/order', async (req, res) => {
   res.json(output)
 })
 
+// 更新以物易物訂單超商資料m2
+router.put('/barter711A/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const sql =
+    'UPDATE orders_barter SET name711_m2=?, address711_m2=? WHERE id=?'
+  const values = [req.body.name711_m2, req.body.address711_m2, id]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
+// 更新以物易物訂單超商資料m1
+router.put('/barter711B/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const sql =
+    'UPDATE orders_barter SET name711_m1=?, address711_m1=? WHERE id=?'
+  const values = [req.body.name711_m1, req.body.address711_m1, id]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
 export default router
