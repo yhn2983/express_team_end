@@ -1,5 +1,6 @@
 import express from 'express'
 import prodRouter from './routes/products.js'
+import shipRouter from './routes/shipment.js'
 import session from 'express-session'
 import mysql_session from 'express-mysql-session'
 //import dayjs from 'dayjs'
@@ -53,6 +54,7 @@ app.use((req, res, next) => {
 // ***設定路由(routes), 路由一定要/開頭, 否則是沒有效果的
 // Raye:
 app.use('/products', prodRouter)
+app.use('/shipment', shipRouter)
 
 // Chen:
 
