@@ -2,6 +2,7 @@ import express from 'express'
 import db from './../utils/mysql2-connect.js'
 import dayjs from 'dayjs'
 import nodemailer from 'nodemailer'
+import { z } from 'zod'
 
 const router = express.Router()
 
@@ -848,7 +849,7 @@ router.get('/order-barter/:id', async (req, res) => {
   if (!id) {
     return res.json({ success: false })
   }
-  const sql = `SELECT ob.*, obi.order_id, obi.product_id_1 p1_id, obi.product_id_2 p2_id, obi.qty_m1, obi.qty_m2, obi.cps_available_m1 cp1, obi.cps_available_m2 cp2, p1.product_photos p1_photos, p2.product_photos p2_photos, p1.product_name p1_name, p2.product_name p2_name, ab1.nickname m1_nickname, ab2.nickname m2_nickname, ab1.name m1_name, ab2.name m2_name, ab1.mobile m1_mobile, ab2.mobile m2_mobile
+  const sql = `SELECT ob.*, obi.order_id, obi.product_id_1 p1_id, obi.product_id_2 p2_id, obi.qty_m1, obi.qty_m2, obi.cps_available_m1 cp1, obi.cps_available_m2 cp2, p1.product_photos p1_photos, p2.product_photos p2_photos, p1.product_name p1_name, p2.product_name p2_name, ab1.nickname m1_nickname, ab2.nickname m2_nickname, ab1.name m1_name, ab2.name m2_name
   FROM orders_barter ob
   JOIN orders_barter_items obi ON ob.id = obi.order_id
   JOIN products p1 ON obi.product_id_1 = p1.id
@@ -864,42 +865,6 @@ router.get('/order-barter/:id', async (req, res) => {
   r.order_date = d_o.isValid() ? d_o.format('YYYY-MM-DD') : ''
 
   res.json({ success: true, data: r })
-})
-
-// 更新以物易物訂單資料
-router.put('/order-barter/:id', async (req, res) => {
-  const output = {
-    success: false,
-    postData: req.body,
-    error: '',
-    code: 0,
-  }
-  let id = +req.params.id || 0
-
-  if (id) {
-    const sqlA = 'UPDATE cart SET p_qty=?, total_price=? WHERE id=?'
-    const valuesA = [req.body.p_qty, req.body.total_price, id]
-
-    const [result] = await db.query(sqlA, valuesA)
-
-    output.success = !!(result.affectedRows && result.changedRows)
-    res.json(output)
-  } else {
-    const sqlB =
-      'UPDATE cart SET member_id=? product_id=?, p_qty=?, p_price=?, total_price=? WHERE id=?'
-    const valuesB = [
-      req.body.member_id,
-      req.body.product_id,
-      req.body.p_qty,
-      req.body.p_price,
-      req.body.total_price,
-      id,
-    ]
-    const [result] = await db.query(sqlB, valuesB)
-
-    output.success = !!(result.affectedRows && result.changedRows)
-    res.json(output)
-  }
 })
 
 //以物易物訂單資料存入SQL
@@ -954,9 +919,29 @@ router.put('/barter711A/:id', async (req, res) => {
   }
   let id = +req.params.id || 0
 
+  // TODO: 資料格式檢查
+  const formSchema = z.object({
+    s_name_m2: z.string().min(2, { message: '名字長度要大於等於2' }),
+    s_phone_m2: z.string().regex(/^09\d{2}-?\d{3}-?\d{3}$/, {
+      message: '請填寫正確格式的手機號碼',
+    }),
+  })
+
+  const parseResult = formSchema.safeParse(req.body)
+  if (!parseResult.success) {
+    output.issues = parseResult.error.issues
+    return res.json(output)
+  }
+
   const sql =
-    'UPDATE orders_barter SET name711_m2=?, address711_m2=? WHERE id=?'
-  const values = [req.body.name711_m2, req.body.address711_m2, id]
+    'UPDATE orders_barter SET send_name_m2=?, send_phone_m2=?, name711_m2=?, address711_m2=? WHERE id=?'
+  const values = [
+    req.body.s_name_m2,
+    req.body.s_phone_m2,
+    req.body.name711_m2,
+    req.body.address711_m2,
+    id,
+  ]
 
   const [result] = await db.query(sql, values)
 
@@ -974,9 +959,29 @@ router.put('/barter711B/:id', async (req, res) => {
   }
   let id = +req.params.id || 0
 
+  // TODO: 資料格式檢查
+  const formSchema = z.object({
+    s_name_m1: z.string().min(2, { message: '名字長度要大於等於2' }),
+    s_phone_m1: z.string().regex(/^09\d{2}-?\d{3}-?\d{3}$/, {
+      message: '請填寫正確格式的手機號碼',
+    }),
+  })
+
+  const parseResult = formSchema.safeParse(req.body)
+  if (!parseResult.success) {
+    output.issues = parseResult.error.issues
+    return res.json(output)
+  }
+
   const sql =
-    'UPDATE orders_barter SET name711_m1=?, address711_m1=? WHERE id=?'
-  const values = [req.body.name711_m1, req.body.address711_m1, id]
+    'UPDATE orders_barter SET send_name_m1=?, send_phone_m1=?, name711_m1=?, address711_m1=? WHERE id=?'
+  const values = [
+    req.body.s_name_m1,
+    req.body.s_phone_m1,
+    req.body.name711_m1,
+    req.body.address711_m1,
+    id,
+  ]
 
   const [result] = await db.query(sql, values)
 
