@@ -10,6 +10,8 @@ import { getIdParam } from '#db-helpers/db-tool.js'
 // 資料庫使用
 import sequelize from '#configs/db.js'
 const { Member } = sequelize.models
+// 不建立模型直接查詢產品資料表
+import { QueryTypes } from 'sequelize'
 
 // 驗証加密密碼字串用
 import { compareHash } from '#db-helpers/password-hash.js'
@@ -366,6 +368,24 @@ router.post(
     })
   }
 )
+
+router.get('/products/:id', async (req, res) => {
+  const id = req.params.id
+
+  try {
+    const products = await sequelize.query(
+      'SELECT * FROM products WHERE seller_id = :id',
+      {
+        replacements: { id: id },
+        type: QueryTypes.SELECT,
+      }
+    )
+
+    res.json(products)
+  } catch (error) {
+    res.status(500).json({ error: error.toString() })
+  }
+})
 /*--------------------------*/
 
 export default router
