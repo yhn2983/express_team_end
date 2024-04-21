@@ -269,6 +269,15 @@ const getListData = async (req) => {
     item.created_at = dayjs(item.created_at).format('YYYYMMDD')
   })
 
+  let coupon = []
+  const sql8 = `SELECT * FROM coupon`
+  ;[coupon] = await db.query(sql8)
+
+  const mid5 = +req.query.member_id || 0
+  let coupon_r = []
+  const sql9 = `SELECT * FROM coupon_received WHERE m_id=${mid5}`
+  ;[coupon_r] = await db.query(sql9)
+
   const cate = []
   const [cateRows] = await db.query('SELECT * FROM categories')
   // 先取得第一層的資料
@@ -469,6 +478,8 @@ const getListData = async (req) => {
     priceOrder,
     dateOrder,
     barter,
+    coupon,
+    coupon_r,
   }
 }
 
@@ -970,6 +981,28 @@ router.put('/barter711B/:id', async (req, res) => {
   const [result] = await db.query(sql, values)
 
   output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
+//領取優惠券存入SQL
+router.post('/coupon', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+
+  const sql =
+    'INSERT INTO `coupon_received` (m_id, coupon_id, created_at) VALUES (?, ?, NOW())'
+
+  try {
+    let [result] = await db.query(sql, [req.body.m_id, req.body.coupon_id])
+    output.success = !!result.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
   res.json(output)
 })
 
