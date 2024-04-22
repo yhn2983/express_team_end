@@ -247,9 +247,11 @@ router.get('/product-api-shop', async (req, res) => {
     // 如果有缓存的产品 ID，则使用缓存的 ID
     if (reqId !== null) {
       // 2. 构建 SQL 查询语句
-      const sql = `SELECT id, seller_id, product_name, product_price
-                 FROM products
-                 WHERE id = ?` // 使用占位符以防止 SQL 注入攻击
+      const sql = `SELECT cart.id, member_id, product_id , p_name, p_price , p_qty , total_price , available_cp , p.seller_id as seller_id  
+                 FROM cart
+                 INNER JOIN products as p 
+                 ON p.id = product_id 
+                 WHERE member_id = ?` // 使用占位符以防止 SQL 注入攻击
 
       // 3. 执行查询
       const [rows] = await db.query(sql, [reqId])
@@ -269,57 +271,59 @@ router.get('/add', async (req, res) => {
 })
 router.post('/add', async (req, res) => {
   //TODO:資料格式檢查
-  const sql =
-    'INSERT INTO `orders`( `class`, `seller_id`, `buyer_id`, `total_price`, `total_amount`, `shipment_fee`, `payment_status`, `payment_way`, `shipment_status`, `discount_cp`, `discount_coupon`, `complete_status`, `complete_date`, `order_date`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())'
-  const [result] = await db.query(sql, [
-    req.body.class,
-    req.body.seller_id,
-    req.body.buyer_id,
-    req.body.total_price,
-    req.body.total_amount,
-    req.body.shipment_fee,
-    // req.body.payment_status,
-    1,
-    req.body.payment_way,
-    // req.body.shipment_status,
-    1,
-    // req.body.discount_cp,
-    1,
-    req.body.discount_coupon,
-    // req.body.complete_status,
-    1,
-    // req.body.complete_date,
-    0,
-    req.body.order_date,
-  ])
-
-  const ordersId = ' SELECT id FROM orders ORDER BY id  DESC LIMIT 1'
-  const lastInsertId = result.insertId
-  console.log(lastInsertId)
-
-  const sql2 =
-    'INSERT INTO `orders_items` ( `order_id`, `product_id`, `item_price`, `item_qty`, `carbon_points_available`, `after_bargin_price`, `rating`, `comments`, `evaluation_date`) VALUES (?,?,?,?,?,?,?,?,?)'
-
-  for (let i = 0; i < req.body.product_id.length; i++) {
-    const [result2] = await db.query(sql2, [
-      lastInsertId,
-      req.body.product_id[i],
-      req.body.product_price[i],
+  for (let j = 0; j < req.body.seller_id.length; j++) {
+    const sql =
+      'INSERT INTO `orders`( `class`, `seller_id`, `buyer_id`, `total_price`, `total_amount`, `shipment_fee`, `payment_status`, `payment_way`, `shipment_status`, `discount_cp`, `discount_coupon`, `complete_status`, `complete_date`, `order_date`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())'
+    const [result] = await db.query(sql, [
+      req.body.class,
+      req.body.seller_id[j],
+      req.body.buyer_id,
+      req.body.total_price,
+      req.body.total_amount[j],
+      req.body.shipment_fee,
+      // req.body.payment_status,
       1,
+      req.body.payment_way,
+      // req.body.shipment_status,
       1,
+      // req.body.discount_cp,
       1,
+      req.body.discount_coupon,
+      // req.body.complete_status,
       1,
-      1,
-      1,
-      //   // req.body.product_id,
-      //   // req.body.item_price,
-      //   // req.body.item_qty,
-      //   // req.body.carbon_points_available,
-      //   // req.body.after_bargin_price,
-      //   // req.body.rating,
-      //   // req.body.comments,
-      //   // req.body.evalution_date,
+      // req.body.complete_date,
+      0,
+      req.body.order_date,
     ])
+
+    const ordersId = ' SELECT id FROM orders ORDER BY id  DESC LIMIT 1'
+    const lastInsertId = result.insertId
+    console.log(lastInsertId)
+
+    const sql2 =
+      'INSERT INTO `orders_items` ( `order_id`, `product_id`, `item_price`, `item_qty`, `carbon_points_available`, `after_bargin_price`, `rating`, `comments`, `evaluation_date`) VALUES (?,?,?,?,?,?,?,?,?)'
+
+    for (let i = 0; i < req.body.product_id.length; i++) {
+      const [result2] = await db.query(sql2, [
+        lastInsertId,
+        req.body.product_id[i],
+        req.body.product_price[i],
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        //   // req.body.product_id,
+        //   // req.body.item_price,
+        //   // req.body.item_qty,
+        //   // req.body.carbon_points_available,
+        //   // req.body.after_bargin_price,
+        //   // req.body.rating,
+        //   // req.body.comments,
+        //   // req.body.evalution_date,
+      ])
+    }
   }
 
   res.json(req.body)
