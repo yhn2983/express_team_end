@@ -19,6 +19,10 @@ function socketEvents(io) {
     socket.on('message', (data) => {
       console.log(data) // 打印出收到的消息
       io.emit('messageResponse', data) // 將收到的消息發送給所有用戶
+      /*
+      const roomId = data.connectionState.roomId
+      io.to(`room${roomId}`).emit('messageResponse', data) // 將收到的消息發送給該房間的所有用戶
+      */
     })
 
     socket.on('typing', (data) => socket.broadcast.emit('typingResponse', data)) // 當用戶正在輸入時，通知其他用戶
