@@ -9,18 +9,18 @@ const router = express.Router()
 router.post('/sendEmail', async (req, res) => {
   const { name, email, subject, message } = req.body
   const transporter = nodemailer.createTransport({
-    host: 'smtp.example.com',
+    host: 'moritairohadesu@gmail.com',
     port: 587,
     secure: false,
     auth: {
-      user: 'your_email@example.com',
-      pass: 'your_email_password',
+      user: 'moritairohadesu@gmail.com',
+      pass: 'test123456TEST',
     },
   })
 
   const mailOptions = {
-    from: 'your_email@example.com',
-    to: 'recipient@example.com',
+    from: 'test@example.com',
+    to: 'moritairohadesu@gmail.com',
     subject: subject,
     text: `From: ${name} (${email})\n\n${message}`,
   }
@@ -270,6 +270,10 @@ const getListData = async (req) => {
     item.created_at = dayjs(item.created_at).format('YYYYMMDD')
   })
 
+  let ob = []
+  const sql10 = `SELECT * FROM orders_barter`
+  ;[ob] = await db.query(sql10)
+
   let coupon = []
   const sql8 = `SELECT * FROM coupon`
   ;[coupon] = await db.query(sql8)
@@ -278,6 +282,24 @@ const getListData = async (req) => {
   let coupon_r = []
   const sql9 = `SELECT * FROM coupon_received WHERE m_id=${mid5}`
   ;[coupon_r] = await db.query(sql9)
+
+  let purchase_order = []
+  const sql11 = `SELECT * FROM purchase_order`
+  ;[purchase_order] = await db.query(sql11)
+
+  const mid6 = +req.query.member_id || 0
+  let coupon_list = []
+  const sql12 = `SELECT * FROM coupon_received cr JOIN coupon c ON cr.coupon_id = c.id WHERE cr.m_id=${mid6}`
+  ;[coupon_list] = await db.query(sql12)
+
+  coupon_list.forEach((item) => {
+    item.start_date = dayjs(item.start_date).format('YYYY-MM-DD')
+    item.end_date = dayjs(item.end_date).format('YYYY-MM-DD')
+    item.created_at = dayjs(item.created_at).format('YYYY-MM-DD')
+    item.used_at = item.used_at
+      ? dayjs(item.used_at).format('YYYY-MM-DD')
+      : null
+  })
 
   const cate = []
   const [cateRows] = await db.query('SELECT * FROM categories')
@@ -481,6 +503,9 @@ const getListData = async (req) => {
     barter,
     coupon,
     coupon_r,
+    ob,
+    purchase_order,
+    coupon_list,
   }
 }
 
@@ -1008,6 +1033,52 @@ router.post('/coupon', async (req, res) => {
     output.error = ex.toString()
   }
 
+  res.json(output)
+})
+
+// 完成以物易物訂單 : m2
+router.put('/ob-complete/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const now = dayjs()
+  const formattedTime = now.format('YYYY-MM-DD HH:mm:ss')
+
+  const sql =
+    'UPDATE orders_barter SET complete_status_m2=?, complete_date_m2=? WHERE id=?'
+  const values = [req.body.complete_status_m2, formattedTime, id]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
+// 完成以物易物訂單 : m1
+router.put('/ob-completeA/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const now = dayjs()
+  const formattedTime = now.format('YYYY-MM-DD HH:mm:ss')
+
+  const sql =
+    'UPDATE orders_barter SET complete_status_m1=?, complete_date_m1=? WHERE id=?'
+  const values = [req.body.complete_status_m1, formattedTime, id]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
   res.json(output)
 })
 
