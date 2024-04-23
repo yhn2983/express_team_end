@@ -18,12 +18,14 @@ router.post('/', async (req, res) => {
   const { product_id, buyer_id, after_bargin_price } = req.body
   const id = uuidv4()
   const sql =
-    'INSERT INTO `bargain` (  `buyer_id`, `product_id`, `after_bargin_price` , `seller_id` ) VALUES (?,?,?,?)'
+    'INSERT INTO `bargain` (  `buyer_id`, `product_id`, `after_bargin_price` , `seller_id`, `available_cp` , `p_qty`) VALUES (?,?,?,?,?,?)'
   const [result] = await db.query(sql, [
     req.body.buyer_id,
     req.body.product_id,
     req.body.after_bargin_price,
     req.body.seller_id,
+    req.body.available_cp,
+    req.body.p_qty,
   ])
   // 生成唯一的 ID
   // 使用 uuidv4 生成唯一的 UUID
@@ -54,11 +56,17 @@ router.get('/seller', async (req, res) => {
   res.json({ rows })
 })
 router.get('/buyer', async (req, res) => {
+  let whereMain = ' WHERE 1 '
+  let memberId = req.query.id || ''
+  if (memberId) {
+    whereMain += ` AND  bargain.buyer_id=${memberId}`
+  }
   const sql = `SELECT *,bargain.id FROM bargain 
   INNER JOIN products 
     ON  products.id= bargain.product_id
     INNER JOIN address_book 
-    ON  address_book.id= bargain.seller_id
+    ON  address_book.id= bargain.seller_id  
+    ${whereMain}
   `
   const [rows] = await db.query(sql)
 
@@ -111,7 +119,7 @@ router.put('/:id/respond', async (req, res) => {
 router.get('/checkout/:id', async (req, res) => {
   const id = req.params.id
   const sql = `SELECT 
-  bargain.id , pro.product_name , bargain.after_bargin_price ,pro.seller_id
+  bargain.id , pro.product_name , pro.product_price , bargain.after_bargin_price ,pro.seller_id  , bargain.available_cp , bargain.p_qty
   FROM bargain 
   INNER JOIN products AS pro 
   ON pro.id = bargain.product_id
