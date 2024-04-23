@@ -24,7 +24,7 @@ router.get('/get/:eid', async (req, res) => {
     return res.json({ success: false })
   }
   try {
-    const sql = `SELECT   products.product_name , 
+    const sql = `SELECT orders_items.evaluation_date , orders_items.id , products.product_name , 
   products.product_photos , 
   seller_ab.name AS seller_name 
    FROM orders 
@@ -34,14 +34,14 @@ router.get('/get/:eid', async (req, res) => {
  ON orders.seller_id = seller_ab.id 
  INNER JOIN products 
  ON orders_items.product_id =products.id 
- WHERE orders.id=?`
+ WHERE orders_items.id=?`
     const [rows] = await db.query(sql, [eid])
     if (!rows.length) {
       return res.json({ success: false })
     }
     const r = rows[0]
-    console.log(r)
-    res.json(r)
+    console.log(rows)
+    res.json({ rows })
   } catch (error) {
     console.error('Error fetching data from database:', error)
     res.status(500).json({ success: false, error: 'Internal Server Error' })

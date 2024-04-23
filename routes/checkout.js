@@ -301,7 +301,7 @@ router.post('/add', async (req, res) => {
     console.log(lastInsertId)
 
     const sql2 =
-      'INSERT INTO `orders_items` ( `order_id`, `product_id`, `item_price`, `item_qty`, `carbon_points_available`, `after_bargin_price`, `rating`, `comments`, `evaluation_date`) VALUES (?,?,?,?,?,?,?,?,?)'
+      'INSERT INTO `orders_items` ( `order_id`, `product_id`, `item_price`, `item_qty`, `carbon_points_available`, `after_bargin_price` ) VALUES (?,?,?,?,?,?)'
 
     for (let i = 0; i < req.body.product_id.length; i++) {
       const [result2] = await db.query(sql2, [
@@ -310,10 +310,7 @@ router.post('/add', async (req, res) => {
         req.body.product_price[i],
         req.body.item_qty[i],
         req.body.carbon_points_available[i],
-        1,
-        1,
-        1,
-        1,
+        req.body.after_bargin_price,
         //   // req.body.product_id,
         //   // req.body.item_price,
 
