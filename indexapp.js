@@ -1,10 +1,16 @@
 import express from 'express'
 import prodRouter from './routes/products.js'
+import shipRouter from './routes/shipment.js'
 import session from 'express-session'
 import mysql_session from 'express-mysql-session'
 //import dayjs from 'dayjs'
 import db from './utils/mysql2-connect.js'
 import cors from 'cors'
+import boRouter from './routes/buyer-order.js'
+import bargainRouter from './routes/bargain.js'
+import checkoutRouter from './routes/checkout.js'
+import cookieParser from 'cookie-parser'
+import evaRouter from './routes/evaluation.js'
 
 // *** 將session資料存入MySQL
 const MysqlStore = mysql_session(session)
@@ -53,10 +59,16 @@ app.use((req, res, next) => {
 // ***設定路由(routes), 路由一定要/開頭, 否則是沒有效果的
 // Raye:
 app.use('/products', prodRouter)
+app.use('/shipment', shipRouter)
 
 // Chen:
 
 // Kai:
+app.use(cookieParser())
+app.use('/buyer-order', boRouter)
+app.use('/checkout', checkoutRouter)
+app.use('/evaluation', evaRouter)
+app.use('/bargain', bargainRouter)
 
 // ***靜態內容***
 app.use(express.static('public'))

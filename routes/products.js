@@ -1,9 +1,38 @@
 import express from 'express'
 import db from './../utils/mysql2-connect.js'
-import upload from './../utils/upload-imgs.js'
 import dayjs from 'dayjs'
+import nodemailer from 'nodemailer'
 
 const router = express.Router()
+
+router.post('/sendEmail', async (req, res) => {
+  const { name, email, subject, message } = req.body
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.example.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: 'your_email@example.com',
+      pass: 'your_email_password',
+    },
+  })
+
+  const mailOptions = {
+    from: 'your_email@example.com',
+    to: 'recipient@example.com',
+    subject: subject,
+    text: `From: ${name} (${email})\n\n${message}`,
+  }
+
+  try {
+    await transporter.sendMail(mailOptions)
+    console.log('郵件發送成功！')
+    res.status(200).send('郵件發送成功!')
+  } catch (e) {
+    console.error('郵件發送失敗', e)
+    res.status(500).send('郵件發送失敗，請稍後再試')
+  }
+})
 
 const getListData = async (req) => {
   let keyword = req.query.keyword || ''
@@ -14,6 +43,22 @@ const getListData = async (req) => {
     \`product_name\` LIKE ${db.escape(`%${keyword}%`)} 
     )
     ` // escape本身就會加''單引號, 不需要再額外加上
+  }
+
+  // sort
+  let orderby = 'ORDER BY '
+  let priceOrder = req.query.priceOrder || ''
+  let dateOrder = req.query.dateOrder || ''
+  if (priceOrder == 'priceSortASC') {
+    orderby += `\`product_price\` ASC`
+  } else if (priceOrder == 'priceSortDESC') {
+    orderby += `\`product_price\` DESC`
+  } else if (dateOrder == 'dateSortASC') {
+    orderby += `\`p\`.\`created_at\` ASC`
+  } else if (dateOrder == 'dateSortDESC') {
+    orderby += `\`p\`.\`created_at\` DESC`
+  } else {
+    orderby += '1'
   }
 
   // category search
@@ -187,7 +232,7 @@ const getListData = async (req) => {
       redirect = `?page=${totalPages}`
       return { success: false, redirect }
     }
-    const sql2 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} ORDER BY p.id DESC LIMIT ${(page - 1) * perPage}, ${perPage}`
+    const sql2 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} ${orderby} LIMIT ${(page - 1) * perPage}, ${perPage}`
     ;[rows] = await db.query(sql2)
   }
 
@@ -199,6 +244,30 @@ const getListData = async (req) => {
   let rowsRandom = []
   const sql3 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} ORDER BY RAND()`
   ;[rowsRandom] = await db.query(sql3)
+
+  const mid4 = +req.query.member_id || 0
+  let barterProds = []
+  const sql4 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id where p.seller_id=${mid4}`
+  ;[barterProds] = await db.query(sql4)
+
+  const mid = +req.query.member_id || 0
+  let cartProd = []
+  const sql5 = `SELECT * FROM cart WHERE member_id=${mid}`
+  ;[cartProd] = await db.query(sql5)
+
+  const mid2 = +req.query.member_id || 0
+  let likeProd = []
+  const sql6 = `SELECT * FROM products_likes WHERE member_id=${mid2}`
+  ;[likeProd] = await db.query(sql6)
+
+  const mid3 = +req.query.member_id || 0
+  let barter = []
+  const sql7 = `SELECT b.*, ab2.nickname m2_nickname, p2.product_name p2_name, ab.nickname m1_nickname, p1.product_name p1_name FROM barter b JOIN address_book ab2 ON b.m2_id = ab2.id JOIN products p2 ON b.p2_id = p2.id JOIN address_book ab ON b.m1_id = ab.id JOIN products p1 ON b.p1_id = p1.id WHERE m1_id=${mid3} OR m2_id=${mid3} ORDER BY b.id DESC`
+  ;[barter] = await db.query(sql7)
+
+  barter.forEach((item) => {
+    item.created_at = dayjs(item.created_at).format('YYYYMMDD')
+  })
 
   const cate = []
   const [cateRows] = await db.query('SELECT * FROM categories')
@@ -267,6 +336,68 @@ const getListData = async (req) => {
   const sqlDateRangeF = `SELECT COUNT(*) AS dateRangeF FROM products WHERE created_at BETWEEN '2024-01-01' AND '2024-12-31'`
   ;[[{ dateRangeF }]] = await db.query(sqlDateRangeF)
 
+  // 分類商品計數
+  let totalFree = [[{}]]
+  const sqlFree = `SELECT COUNT(*) as totalFree FROM products WHERE category_id = 1`
+  ;[[{ totalFree }]] = await db.query(sqlFree)
+  let totalComputer = [[{}]]
+  const sqlComputer = `SELECT COUNT(*) as totalComputer FROM products WHERE category_id IN (21, 22, 23, 24)`
+  ;[[{ totalComputer }]] = await db.query(sqlComputer)
+  let totalPhone = [[{}]]
+  const sqlPhone = `SELECT COUNT(*) as totalPhone FROM products WHERE category_id IN (25, 26, 27, 28)`
+  ;[[{ totalPhone }]] = await db.query(sqlPhone)
+  let totalMan = [[{}]]
+  const sqlMan = `SELECT COUNT(*) as totalMan FROM products WHERE category_id IN (29, 30, 31, 32, 33, 34, 35)`
+  ;[[{ totalMan }]] = await db.query(sqlMan)
+  let totalWoman = [[{}]]
+  const sqlWoman = `SELECT COUNT(*) as totalWoman FROM products WHERE category_id IN (36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46)`
+  ;[[{ totalWoman }]] = await db.query(sqlWoman)
+  let totalBeauty = [[{}]]
+  const sqlBeauty = `SELECT COUNT(*) as totalBeauty FROM products WHERE category_id IN (47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58)`
+  ;[[{ totalBeauty }]] = await db.query(sqlBeauty)
+  let totalBrand = [[{}]]
+  const sqlBrand = `SELECT COUNT(*) as totalBrand FROM products WHERE category_id IN (59, 60, 61, 62, 63)`
+  ;[[{ totalBrand }]] = await db.query(sqlBrand)
+  let totalGame = [[{}]]
+  const sqlGame = `SELECT COUNT(*) as totalGame FROM products WHERE category_id IN (64, 65, 66)`
+  ;[[{ totalGame }]] = await db.query(sqlGame)
+  let totalEarphone = [[{}]]
+  const sqlEarphone = `SELECT COUNT(*) as totalEarphone FROM products WHERE category_id IN (67, 68, 69, 70, 71)`
+  ;[[{ totalEarphone }]] = await db.query(sqlEarphone)
+  let totalCamera = [[{}]]
+  const sqlCamera = `SELECT COUNT(*) as totalCamera FROM products WHERE category_id IN (72, 73, 74, 75, 76)`
+  ;[[{ totalCamera }]] = await db.query(sqlCamera)
+  let totalHome = [[{}]]
+  const sqlHome = `SELECT COUNT(*) as totalHome FROM products WHERE category_id IN (77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88)`
+  ;[[{ totalHome }]] = await db.query(sqlHome)
+  let totalEletri = [[{}]]
+  const sqlEletri = `SELECT COUNT(*) as totalEletri FROM products WHERE category_id IN (89, 90, 91, 92, 93, 94, 95, 96, 97)`
+  ;[[{ totalEletri }]] = await db.query(sqlEletri)
+  let totalBaby = [[{}]]
+  const sqlBaby = `SELECT COUNT(*) as totalBaby FROM products WHERE category_id IN (98, 99, 100, 101, 102, 103, 104, 105)`
+  ;[[{ totalBaby }]] = await db.query(sqlBaby)
+  let totalHealth = [[{}]]
+  const sqlHealth = `SELECT COUNT(*) as totalHealth FROM products WHERE category_id IN (106, 107, 108, 109, 110)`
+  ;[[{ totalHealth }]] = await db.query(sqlHealth)
+  let totalSport = [[{}]]
+  const sqlSport = `SELECT COUNT(*) as totalSport FROM products WHERE category_id IN (111, 112, 113, 114, 115)`
+  ;[[{ totalSport }]] = await db.query(sqlSport)
+  let totalDrink = [[{}]]
+  const sqlDrink = `SELECT COUNT(*) as totalDrink FROM products WHERE category_id IN (116, 117, 118, 119, 120, 121, 122, 123)`
+  ;[[{ totalDrink }]] = await db.query(sqlDrink)
+  let totalPet = [[{}]]
+  const sqlPet = `SELECT COUNT(*) as totalPet FROM products WHERE category_id IN (124, 125, 126)`
+  ;[[{ totalPet }]] = await db.query(sqlPet)
+  let totalTicket = [[{}]]
+  const sqlTicket = `SELECT COUNT(*) as totalTicket FROM products WHERE category_id IN (127, 128, 129, 130, 131)`
+  ;[[{ totalTicket }]] = await db.query(sqlTicket)
+  let totalCar = [[{}]]
+  const sqlCar = `SELECT COUNT(*) as totalCar FROM products WHERE category_id IN (132, 133, 134, 135, 136, 137, 138)`
+  ;[[{ totalCar }]] = await db.query(sqlCar)
+  let totalOther = [[{}]]
+  const sqlOther = `SELECT COUNT(*) as totalOther FROM products WHERE category_id = 20`
+  ;[[{ totalOther }]] = await db.query(sqlOther)
+
   // 單純回應資料
   return {
     success: true,
@@ -312,6 +443,32 @@ const getListData = async (req) => {
     dateRangeD,
     dateRangeE,
     dateRangeF,
+    barterProds,
+    cartProd,
+    likeProd,
+    totalFree,
+    totalComputer,
+    totalPhone,
+    totalMan,
+    totalWoman,
+    totalBeauty,
+    totalBrand,
+    totalGame,
+    totalEarphone,
+    totalCamera,
+    totalHome,
+    totalEletri,
+    totalBaby,
+    totalHealth,
+    totalSport,
+    totalDrink,
+    totalPet,
+    totalTicket,
+    totalCar,
+    totalOther,
+    priceOrder,
+    dateOrder,
+    barter,
   }
 }
 
@@ -325,28 +482,13 @@ const getListData = async (req) => {
 //   next()
 // })
 
-router.get('/', async (req, res) => {
-  res.locals.pageName = 'prod_list'
-  res.locals.title = '產品列表 — ' + res.locals.title
-
-  const data = await getListData(req)
-  if (data.redirect) {
-    return res.redirect(data.redirect)
-  }
-  if (req.session.admin) {
-    //有登入
-    res.render('products/list', data)
-  } else {
-    //沒有登入
-    res.render('products/list-no-admin', data)
-  }
-})
-
+// 商品資料
 router.get('/api', async (req, res) => {
   const data = await getListData(req)
   res.json(data)
 })
 
+// 詳細商品資料
 router.get('/api/:pid', async (req, res) => {
   const pid = +req.params.pid || 0
   if (!pid) {
@@ -366,159 +508,469 @@ router.get('/api/:pid', async (req, res) => {
   res.json({ success: true, data: r })
 })
 
-// // 收藏功能
-// router.get('/like-toggle/:pid', async (req, res) => {
-//   const member_id = 20 //測試的假資料
-//   const output = {
-//     success: false,
-//     action: '',
-//     info: '',
-//   }
+//購物車資料存入SQL
+router.post('/api/:pid', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
 
-//   const pid = +req.params.pid || 0
-//   if (!pid) {
-//     output.info = '錯誤的商品編號'
-//     return res.json(output)
-//   }
+  const productId = req.body.product_id
+  const sqlSelect = `SELECT * FROM cart WHERE product_id=?`
+  const sqlInsert = `Insert INTO cart (member_id, product_id, p_photos, p_name, p_price, p_qty, total_price, available_cp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  const sqlUpdate = `UPDATE cart SET p_qty =?, total_price =? WHERE product_id = ?`
 
-//   //判斷是否有該項商品
-//   const p_sql = `SELECT id FROM products WHERE id=?`
-//   const [p_rows] = await db.query(p_sql, [pid])
-//   if (!p_rows.length) {
-//     output.info = '沒有該商品'
-//     return res.json(output)
-//   }
-//   const sql = `SELECT * FROM product_likes WHERE product_id=? AND member_id=?`
-//   const [rows] = await db.query(sql, [pid, member_id])
+  try {
+    let [existRows] = await db.query(sqlSelect, [productId])
 
-//   if (rows.length) {
-//     //有資料的話就移除
-//     output.action = 'remove'
-//     const [result] = await db.query(
-//       `DELETE FROM product_likes WHERE id=${rows[0].id}`
-//     )
-//     output.success = !!result.affectedRows
-//   } else {
-//     // 沒有資料的話就加入
-//     output.action = 'add'
-//     const sql = `INSERT INTO product_likes (product_id, member_id) VALUES (?, ?) `
-//     const [result] = await db.query(sql, [pid, member_id])
-//     output.success = !!result.affectedRows
-//   }
-//   res.json(output)
-// })
+    if (existRows.length > 0) {
+      const existingRow = existRows[0]
+      const updatedQuantity = existingRow.p_qty + req.body.p_qty
+      const updatedTotalPrice = existingRow.p_price * updatedQuantity
 
-// // 刪除路由
-// router.delete('/:product_id', async (req, res) => {
-//   const id = +req.params.product_id || 0
-//   if (id === 0) {
-//     return res.json({
-//       success: false,
-//       info: '無效的參數',
-//     })
-//   }
+      let [updateResult] = await db.query(sqlUpdate, [
+        updatedQuantity,
+        updatedTotalPrice,
+        productId,
+      ])
 
-//   const sql = `DELETE FROM products WHERE id=?`
-//   const [result] = await db.query(sql, [id])
-//   res.json(result)
-// })
+      output.success = !!updateResult.affectedRows
+    } else {
+      let [insertResult] = await db.query(sqlInsert, [
+        req.body.member_id,
+        req.body.product_id,
+        req.body.p_photos,
+        req.body.p_name,
+        req.body.p_price,
+        req.body.p_qty,
+        req.body.p_price * req.body.p_qty,
+        req.body.available_cp,
+      ])
 
-// // 購物車新增路由
-// // 處理新增資料的表單
-// router.post('/add', upload.none(), async (req, res) => {
-//   const output = {
-//     success: false,
-//     postData: req.body,
-//     error: '',
-//     code: 0,
-//   }
+      output.success = !!insertResult.affectedRows
+    }
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+  res.json(output)
+})
 
-//   const sql =
-//     'INSERT INTO `cart` (product_photos, product_price, product_qty, total_price, available_cp) VALUES (?, ?, ?, ?, ?)'
+// 購物車
+router.get('/cart/:pid', async (req, res) => {
+  const pid = +req.params.pid || 0
+  if (!pid) {
+    return res.json({ success: false })
+  }
+  const sql = `SELECT * FROM cart WHERE id=${pid}`
+  const [rows] = await db.query(sql)
+  if (!rows.length) {
+    return res.json({ success: false })
+  }
+  const r = rows[0]
+  res.json({ success: true, data: r })
+})
 
-//   try {
-//     const [result] = await db.query(sql, [
-//       req.body.product_photos,
-//       req.body.product_price,
-//       req.body.product_qty,
-//       req.body.total_price,
-//       req.body.available_cp,
-//     ])
-//     output.success = !!result.affectedRows
-//   } catch (ex) {
-//     output.error = ex.toString()
-//   }
+// 更新購物車
+router.put('/cart/:pid', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let pid = +req.params.pid || 0
 
-//   res.json(output)
-// })
+  if (pid) {
+    const sqlA = 'UPDATE cart SET p_qty=?, total_price=? WHERE id=?'
+    const valuesA = [req.body.p_qty, req.body.total_price, pid]
 
-// // 新增路由
-// router.get('/add', upload.single('photo'), async (req, res) => {
-//   res.locals.pageName = 'prod_add'
-//   res.locals.title = '新增商品'
+    const [result] = await db.query(sqlA, valuesA)
 
-//   const data = await getListData(req)
-//   if (data.redirect) {
-//     return res.redirect(data.redirect)
-//   }
-//   res.render('products/add', data)
-// })
+    output.success = !!(result.affectedRows && result.changedRows)
+    res.json(output)
+  } else {
+    const sqlB =
+      'UPDATE cart SET member_id=? product_id=?, p_qty=?, p_price=?, total_price=? WHERE id=?'
+    const valuesB = [
+      req.body.member_id,
+      req.body.product_id,
+      req.body.p_qty,
+      req.body.p_price,
+      req.body.total_price,
+      pid,
+    ]
+    const [result] = await db.query(sqlB, valuesB)
 
-// router.post('/add', async (req, res) => {
-//   const output = {
-//     success: false,
-//     postData: req.body,
-//     error: '',
-//     code: 0,
-//   }
+    output.success = !!(result.affectedRows && result.changedRows)
+    res.json(output)
+  }
+})
 
-//   // TODO: 資料格式的檢查
-//   const formSchema = z.object({
-//     name: z.string().min(2, { message: '名字長度要大於等於2' }),
-//     email: z.string().email({ message: '請填寫正確的email' }),
-//     mobile: z
-//       .string()
-//       .regex(/^09\d{2}-?\d{3}-?\d{3}$/, { message: '請填寫正確的手機號碼' }),
-//   })
-//   const parseResult = formSchema.safeParse(req.body)
-//   if (!parseResult.success) {
-//     output.issues = parseResult.error.issues
-//     return res.json(output)
-//   }
+// 購物車刪除路由
+router.delete('/api/:pid', async (req, res) => {
+  const pid = +req.params.pid || 0
+  console.log(pid)
 
-//   let birthday = dayjs(req.body.birthday, 'YYYY-MM-DD', true) //dayjs物件
-//   birthday = birthday.isValid() ? birthday.format('YYYY-MM-DD') : null
-//   req.body.birthday = birthday //置換處理過的值
+  if (pid === 0) {
+    return res.json({
+      success: false,
+      info: '無效的參數',
+    })
+  }
+  const sql = `DELETE FROM cart WHERE id=?`
+  const [result] = await db.query(sql, [pid])
+  res.json(result)
+})
 
-//   const sql =
-//     'INSERT INTO `address_book` (name, email, mobile, birthday, address, created_at) VALUES (?, ?, ?, ?, ?, NOW())'
+// 收藏清單
+router.get('/like-toggle/:pid', async (req, res) => {
+  const pid = +req.params.pid || 0
+  if (!pid) {
+    return res.json({ success: false })
+  }
+  const sql = `SELECT * FROM products_likes WHERE id=${pid}`
+  const [rows] = await db.query(sql)
+  if (!rows.length) {
+    return res.json({ success: false })
+  }
+  const r = rows[0]
+  res.json({ success: true, data: r })
+})
 
-//   let result
-//   try {
-//     const [result] = await db.query(sql, [
-//       req.body.name,
-//       req.body.email,
-//       req.body.mobile,
-//       req.body.birthday,
-//       req.body.address,
-//     ])
-//     output.success = !!result.affectedRows
-//   } catch (ex) {
-//     output.error = ex.toString()
-//   }
+//收藏資料存入SQL
+router.post('/like-toggle/:pid', async (req, res) => {
+  const member_id = req.query.member_id || 0
+  if (!member_id) {
+    output.info = '錯誤的會員編號'
+    return res.json(output)
+  }
 
-//   res.json(output)
-// })
-// // 要處理 multipart/form-data
-// router.post('/add/multi', upload.none(), async (req, res) => {
-//   res.json(req.body)
-// })
+  const output = {
+    success: false,
+    action: '',
+    info: '',
+  }
 
-//router.get('/statistics', async (req, res) => {
-//   res.locals.title = '商品管理統計圖表'
-//   res.locals.pageName = 'prod_statistics'
-//   const data = await getListData(req)
-//   res.json(data)
-// })
+  const pid = +req.params.pid || 0
+  if (!pid) {
+    output.info = '錯誤的商品編號'
+    return res.json(output)
+  }
+
+  const p_sql = `SELECT id FROM products WHERE id=?`
+  const [p_rows] = await db.query(p_sql, [pid])
+  if (!p_rows.length) {
+    output.info = '沒有該商品'
+    return res.json(output)
+  }
+  const sql = `SELECT * FROM products_likes WHERE member_id=? AND product_id=?`
+  const [rows] = await db.query(sql, [member_id, pid])
+
+  if (rows.length) {
+    output.action = 'remove'
+    const [result] = await db.query(
+      `DELETE FROM products_likes WHERE id=${rows[0].id}`
+    )
+    output.success = !!result.affectedRows
+  } else {
+    output.action = 'add'
+    const sql = `INSERT INTO products_likes (member_id, product_id, p_photos, p_name, p_price, p_qty, total_price, available_cp, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW()) `
+    const [result] = await db.query(sql, [
+      member_id,
+      pid,
+      req.body.p_photos,
+      req.body.p_name,
+      req.body.p_price,
+      req.body.p_qty,
+      req.body.total_price,
+      req.body.available_cp,
+    ])
+    output.success = !!result.affectedRows
+  }
+  res.json(output)
+})
+
+// 收藏清單刪除路由
+router.delete('/like-toggle/:pid', async (req, res) => {
+  const pid = +req.params.pid || 0
+  console.log(pid)
+
+  if (pid === 0) {
+    return res.json({
+      success: false,
+      info: '無效的參數',
+    })
+  }
+  const sql = `DELETE FROM products_likes WHERE product_id=?`
+  const [result] = await db.query(sql, [pid])
+  res.json(result)
+})
+
+//以物易物資料存入SQL
+router.post('/barter', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+
+  const sql =
+    'INSERT INTO `barter` (p1_id, p2_id, photo1, photo2, m1_id, m2_id, cp1, cp2, status_reply, status_approve, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW())'
+
+  try {
+    let [result] = await db.query(sql, [
+      req.body.p1_id,
+      req.body.p2_id,
+      req.body.photo1,
+      req.body.photo2,
+      req.body.m1_id,
+      req.body.m2_id,
+      req.body.cp1,
+      req.body.cp2,
+    ])
+    output.success = !!result.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  res.json(output)
+})
+
+// 更新以物易物 : agree
+router.put('/barter/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const sql =
+    'UPDATE barter SET status_reply=?, status_approve=?, approve=? WHERE id=?'
+  const values = [
+    req.body.status_reply,
+    req.body.status_approve,
+    req.body.approve,
+    id,
+  ]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
+// 更新以物易物 : decline
+router.put('/barter2/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const sql =
+    'UPDATE barter SET status_reply=?, status_approve=?, approve=? WHERE id=?'
+  const values = [
+    req.body.status_reply,
+    req.body.status_approve,
+    req.body.approve,
+    id,
+  ]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
+//以物易物邀請存入訂單資料存入SQL
+router.post('/order-barter', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+
+  const sql =
+    'INSERT INTO `orders_barter` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, order_date, complete_status) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, NOW(), 1)'
+
+  try {
+    let [result] = await db.query(sql, [
+      req.body.id,
+      req.body.m1_id,
+      req.body.m2_id,
+    ])
+    output.success = !!result.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  const sql2 =
+    'INSERT INTO `orders_barter_items` (order_id, product_id_1, product_id_2, qty_m1, qty_m2, cps_available_m1, cps_available_m2) VALUES (?, ?, ?, 1, 1, ?, ?)'
+
+  try {
+    let [result2] = await db.query(sql2, [
+      req.body.id,
+      req.body.p1_id,
+      req.body.p2_id,
+      req.body.cp1,
+      req.body.cp2,
+    ])
+    output.success = !!result2.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  res.json(output)
+})
+
+// 以物易物訂單資料
+router.get('/order-barter/:id', async (req, res) => {
+  const id = +req.params.id || 0
+  if (!id) {
+    return res.json({ success: false })
+  }
+  const sql = `SELECT ob.*, obi.order_id, obi.product_id_1 p1_id, obi.product_id_2 p2_id, obi.qty_m1, obi.qty_m2, obi.cps_available_m1 cp1, obi.cps_available_m2 cp2, p1.product_photos p1_photos, p2.product_photos p2_photos, p1.product_name p1_name, p2.product_name p2_name, ab1.nickname m1_nickname, ab2.nickname m2_nickname, ab1.name m1_name, ab2.name m2_name, ab1.mobile m1_mobile, ab2.mobile m2_mobile
+  FROM orders_barter ob
+  JOIN orders_barter_items obi ON ob.id = obi.order_id
+  JOIN products p1 ON obi.product_id_1 = p1.id
+  JOIN products p2 ON obi.product_id_2 = p2.id
+  JOIN address_book ab1 ON p1.seller_id = ab1.id
+  JOIN address_book ab2 ON p2.seller_id = ab2.id WHERE ob.id=${id}`
+  const [rows] = await db.query(sql)
+  if (!rows.length) {
+    return res.json({ success: false })
+  }
+  const r = rows[0]
+  const d_o = dayjs(r.order_date)
+  r.order_date = d_o.isValid() ? d_o.format('YYYY-MM-DD') : ''
+
+  res.json({ success: true, data: r })
+})
+
+// 更新以物易物訂單資料
+router.put('/order-barter/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  if (id) {
+    const sqlA = 'UPDATE cart SET p_qty=?, total_price=? WHERE id=?'
+    const valuesA = [req.body.p_qty, req.body.total_price, id]
+
+    const [result] = await db.query(sqlA, valuesA)
+
+    output.success = !!(result.affectedRows && result.changedRows)
+    res.json(output)
+  } else {
+    const sqlB =
+      'UPDATE cart SET member_id=? product_id=?, p_qty=?, p_price=?, total_price=? WHERE id=?'
+    const valuesB = [
+      req.body.member_id,
+      req.body.product_id,
+      req.body.p_qty,
+      req.body.p_price,
+      req.body.total_price,
+      id,
+    ]
+    const [result] = await db.query(sqlB, valuesB)
+
+    output.success = !!(result.affectedRows && result.changedRows)
+    res.json(output)
+  }
+})
+
+//以物易物訂單資料存入SQL
+router.post('/order', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+
+  const sql =
+    'INSERT INTO `orders` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, shipment_status_m1, shipment_status_m2, order_date, complete_status) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, 1, 1, NOW(), 1)'
+
+  try {
+    let [result] = await db.query(sql, [
+      req.body.id,
+      req.body.m1_id,
+      req.body.m2_id,
+    ])
+    output.success = !!result.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  const sql2 =
+    'INSERT INTO `orders_items` (order_id, product_id_1, product_id_2, qty_m1, qty_m2, cps_available_m1, cps_available_m2) VALUES (?, ?, ?, 1, 1, ?, ?)'
+
+  try {
+    let [result2] = await db.query(sql2, [
+      req.body.id,
+      req.body.p1_id,
+      req.body.p2_id,
+      req.body.cp1,
+      req.body.cp2,
+    ])
+    output.success = !!result2.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  res.json(output)
+})
+
+// 更新以物易物訂單超商資料m2
+router.put('/barter711A/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const sql =
+    'UPDATE orders_barter SET name711_m2=?, address711_m2=? WHERE id=?'
+  const values = [req.body.name711_m2, req.body.address711_m2, id]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
+// 更新以物易物訂單超商資料m1
+router.put('/barter711B/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const sql =
+    'UPDATE orders_barter SET name711_m1=?, address711_m1=? WHERE id=?'
+  const values = [req.body.name711_m1, req.body.address711_m1, id]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
 
 export default router
