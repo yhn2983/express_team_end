@@ -836,7 +836,7 @@ router.post('/order-barter', async (req, res) => {
   }
 
   const sql =
-    'INSERT INTO `orders_barter` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, order_date, complete_status_m1. complete_status_m2) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, NOW(), 1, 1)'
+    'INSERT INTO `orders_barter` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, order_date, complete_status_m1, complete_status_m2) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, NOW(), 1, 1)'
 
   try {
     let [result] = await db.query(sql, [

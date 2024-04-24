@@ -1,9 +1,9 @@
 import express from 'express'
 import prodRouter from './routes/products.js'
 import shipRouter from './routes/shipment.js'
+import linepayRouter from './routes/line-pay.js'
 import session from 'express-session'
 import mysql_session from 'express-mysql-session'
-//import dayjs from 'dayjs'
 import db from './utils/mysql2-connect.js'
 import cors from 'cors'
 
@@ -55,6 +55,7 @@ app.use((req, res, next) => {
 // Raye:
 app.use('/products', prodRouter)
 app.use('/shipment', shipRouter)
+app.use('/line-pay', linepayRouter)
 
 // Chen:
 
