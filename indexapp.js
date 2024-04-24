@@ -6,6 +6,11 @@ import session from 'express-session'
 import mysql_session from 'express-mysql-session'
 import db from './utils/mysql2-connect.js'
 import cors from 'cors'
+import boRouter from './routes/buyer-order.js'
+import bargainRouter from './routes/bargain.js'
+import checkoutRouter from './routes/checkout.js'
+import cookieParser from 'cookie-parser'
+import evaRouter from './routes/evaluation.js'
 
 // *** 將session資料存入MySQL
 const MysqlStore = mysql_session(session)
@@ -60,6 +65,11 @@ app.use('/line-pay', linepayRouter)
 // Chen:
 
 // Kai:
+app.use(cookieParser())
+app.use('/buyer-order', boRouter)
+app.use('/checkout', checkoutRouter)
+app.use('/evaluation', evaRouter)
+app.use('/bargain', bargainRouter)
 
 // ***靜態內容***
 app.use(express.static('public'))

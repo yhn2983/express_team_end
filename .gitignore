@@ -2,6 +2,7 @@
 
 # Node artifact files
 public/imgs
+public/avatar
 dev.env
 
 routes/important.sql
