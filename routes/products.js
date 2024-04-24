@@ -836,7 +836,7 @@ router.post('/order-barter', async (req, res) => {
   }
 
   const sql =
-    'INSERT INTO `orders_barter` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, order_date, complete_status) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, NOW(), 1)'
+    'INSERT INTO `orders_barter` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, order_date, complete_status_m1. complete_status_m2) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, NOW(), 1, 1)'
 
   try {
     let [result] = await db.query(sql, [
@@ -890,48 +890,6 @@ router.get('/order-barter/:id', async (req, res) => {
   r.order_date = d_o.isValid() ? d_o.format('YYYY-MM-DD') : ''
 
   res.json({ success: true, data: r })
-})
-
-//以物易物訂單資料存入SQL
-router.post('/order', async (req, res) => {
-  const output = {
-    success: false,
-    postData: req.body,
-    error: '',
-    code: 0,
-  }
-
-  const sql =
-    'INSERT INTO `orders` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, shipment_status_m1, shipment_status_m2, order_date, complete_status) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, 1, 1, NOW(), 1)'
-
-  try {
-    let [result] = await db.query(sql, [
-      req.body.id,
-      req.body.m1_id,
-      req.body.m2_id,
-    ])
-    output.success = !!result.affectedRows
-  } catch (ex) {
-    output.error = ex.toString()
-  }
-
-  const sql2 =
-    'INSERT INTO `orders_items` (order_id, product_id_1, product_id_2, qty_m1, qty_m2, cps_available_m1, cps_available_m2) VALUES (?, ?, ?, 1, 1, ?, ?)'
-
-  try {
-    let [result2] = await db.query(sql2, [
-      req.body.id,
-      req.body.p1_id,
-      req.body.p2_id,
-      req.body.cp1,
-      req.body.cp2,
-    ])
-    output.success = !!result2.affectedRows
-  } catch (ex) {
-    output.error = ex.toString()
-  }
-
-  res.json(output)
 })
 
 // 更新以物易物訂單超商資料m2
