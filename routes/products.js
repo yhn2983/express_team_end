@@ -289,7 +289,7 @@ const getListData = async (req) => {
 
   const mid6 = +req.query.member_id || 0
   let coupon_list = []
-  const sql12 = `SELECT * FROM coupon_received cr JOIN coupon c ON cr.coupon_id = c.id WHERE cr.m_id=${mid6}`
+  const sql12 = `SELECT * FROM coupon_received cr JOIN coupon c ON cr.coupon_id = c.id WHERE cr.m_id=${mid6} ORDER BY cr.created_at DESC`
   ;[coupon_list] = await db.query(sql12)
 
   coupon_list.forEach((item) => {
