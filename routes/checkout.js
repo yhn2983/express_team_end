@@ -154,6 +154,14 @@ router.get('/api', async (req, res) => {
   res.json(data)
 })
 
+//取得優惠卷(coupon)
+router.get('/coupon', async (req, res) => {
+  let where = ' WHERE 1 '
+  const sql = ` SELECT * FROM  \`coupon_received\`   ${where} `
+  const [rows] = await db.query(sql)
+  res.json(rows)
+})
+
 //----- 新增資料
 //呈現新增表單
 // router.get('/add', async (req, res) => {
@@ -243,21 +251,31 @@ router.get('/product-api', async (req, res) => {
 //取得購物車的商品資料
 router.get('/product-api-shop', async (req, res) => {
   try {
-    let reqId = req.query.shopId || ''
+    let reqId = req.query.id || ''
     // 如果有缓存的产品 ID，则使用缓存的 ID
     if (reqId !== null) {
       // 2. 构建 SQL 查询语句
       const sql = `SELECT cart.id, member_id, product_id , p_name, p_price , p_qty , total_price , available_cp , p.seller_id as seller_id  
                  FROM cart
                  INNER JOIN products as p 
-                 ON p.id = product_id 
+                 ON p.id = cart.product_id 
+                
                  WHERE member_id = ?` // 使用占位符以防止 SQL 注入攻击
 
       // 3. 执行查询
       const [rows] = await db.query(sql, [reqId])
-
+      //取得優惠卷資料
+      const sqlC = ` SELECT * FROM  coupon  as cp 
+      inner join  coupon_received as cr  
+      on cr.coupon_id = cp.id
+      WHERE cr.m_id = ?`
+      const [cp] = await db.query(sqlC, [reqId])
+      //取得小炭點資料
+      const sqlt = ` SELECT * FROM  address_book   
+      WHERE id = ?`
+      const [ct] = await db.query(sqlt, [reqId])
       // 4. 返回查询结果
-      res.json({ rows })
+      res.json({ rows, cp, ct })
     }
   } catch (error) {
     console.error('Error fetching product:', error)
