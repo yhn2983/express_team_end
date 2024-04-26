@@ -2,27 +2,28 @@ import express from 'express'
 import db from './../utils/mysql2-connect.js'
 import dayjs from 'dayjs'
 import nodemailer from 'nodemailer'
+import transporter from '#configs/mail.js'
 import { z } from 'zod'
 
 const router = express.Router()
 
 router.post('/sendEmail', async (req, res) => {
   const { name, email, subject, message } = req.body
-  const transporter = nodemailer.createTransport({
-    host: 'moritairohadesu@gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: 'moritairohadesu@gmail.com',
-      pass: 'test123456TEST',
-    },
-  })
+
+  const mailText = () => `(此封信件為自動寄出，請勿直接回覆)\n
+  您好，${name}先生/小姐\n
+  您的訊息：${message}
+  請稍待回音，我們將於3-5個工作天內盡快回覆您，謝謝您！
+    
+
+  DEAL 2ND SHOP團隊敬上`
 
   const mailOptions = {
-    from: 'test@example.com',
-    to: 'moritairohadesu@gmail.com',
-    subject: subject,
-    text: `From: ${name} (${email})\n\n${message}`,
+    // 這裡要改寄送人名稱，email在.env檔中代入
+    from: `DEAL官方團隊<${process.env.SMTP_TO_EMAIL}>`,
+    to: email,
+    subject: `自動回復：${subject}`,
+    text: mailText(),
   }
 
   try {
@@ -30,7 +31,6 @@ router.post('/sendEmail', async (req, res) => {
     console.log('郵件發送成功！')
     res.status(200).send('郵件發送成功!')
   } catch (e) {
-    console.error('郵件發送失敗', e)
     res.status(500).send('郵件發送失敗，請稍後再試')
   }
 })
