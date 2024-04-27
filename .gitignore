@@ -2,7 +2,7 @@
 
 # Node artifact files
 dev.env
-
+public/avatar
 routes/important.sql
 routes/ws-chat.js
 routes/ws-draw.js
