@@ -436,6 +436,40 @@ router.post('/postStoreLike', async (req, res) => {
     res.status(500).json({ status: 'error', message: error.toString() })
   }
 })
+
+router.post('/getStoreLikeList', async (req, res) => {
+  const { user_id } = req.body
+
+  try {
+    const storeLikes = await sequelize.query(
+      `SELECT 
+          store_like.store_id, 
+          address_book.nickname, 
+          address_book.photo
+        FROM 
+          store_like
+        JOIN 
+          address_book ON store_like.store_id = address_book.id
+        WHERE 
+          store_like.user_id = :userId AND
+          store_like.store_like = 2`,
+      {
+        replacements: { userId: user_id },
+        type: QueryTypes.SELECT,
+      }
+    )
+
+    const result = storeLikes.map((storeLike) => ({
+      store_id: storeLike.store_id,
+      nickname: storeLike.nickname,
+      photo: storeLike.photo,
+    }))
+
+    res.json({ status: 'success', data: result })
+  } catch (error) {
+    res.json({ status: 'error', message: error.message })
+  }
+})
 /*--------------------------*/
 
 export default router
