@@ -11,6 +11,12 @@ import bargainRouter from './routes/bargain.js'
 import checkoutRouter from './routes/checkout.js'
 import cookieParser from 'cookie-parser'
 import evaRouter from './routes/evaluation.js'
+import BAckstage from './routes/backstage.js'
+import unpaidRouter from './routes/unpaid-maket.js'
+import ListRouter from './routes/list-maket.js'
+import ListpostRouter from './routes/list-post.js'
+import ListeditRouter from './routes/list-maket-edit.js'
+import BackstageManagerRouter from './routes/backstage-manager.js'
 
 // *** 將session資料存入MySQL
 const MysqlStore = mysql_session(session)
@@ -63,6 +69,12 @@ app.use('/shipment', shipRouter)
 app.use('/line-pay', linepayRouter)
 
 // Chen:
+app.use('/backstage', BAckstage)
+app.use('/unpaid-maket', unpaidRouter)
+app.use('/list-maket', ListRouter)
+app.use('/list-post', ListpostRouter)
+app.use('/list-maket-edit', ListeditRouter)
+app.use('/backstage-manager', BackstageManagerRouter)
 
 // Kai:
 app.use(cookieParser())
