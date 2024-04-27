@@ -446,11 +446,11 @@ router.post('/getStoreLikeList', async (req, res) => {
           store_like.store_id, 
           address_book.nickname, 
           address_book.photo
-       FROM 
+        FROM 
           store_like
-       JOIN 
+        JOIN 
           address_book ON store_like.store_id = address_book.id
-       WHERE 
+        WHERE 
           store_like.user_id = :userId AND
           store_like.store_like = 2`,
       {
@@ -464,8 +464,6 @@ router.post('/getStoreLikeList', async (req, res) => {
       nickname: storeLike.nickname,
       photo: storeLike.photo,
     }))
-
-    console.log(result) // 打印查詢結果
 
     res.json({ status: 'success', data: result })
   } catch (error) {
