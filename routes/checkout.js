@@ -243,14 +243,14 @@ router.get('/product-api', async (req, res) => {
 //取得購物車的商品資料
 router.get('/product-api-shop', async (req, res) => {
   try {
-    let reqId = req.query.shopId || ''
+    let reqId = req.query.id || ''
     // 如果有缓存的产品 ID，则使用缓存的 ID
     if (reqId !== null) {
       // 2. 构建 SQL 查询语句
       const sql = `SELECT cart.id, member_id, product_id , p_name, p_price , p_qty , total_price , available_cp , p.seller_id as seller_id  
                  FROM cart
                  INNER JOIN products as p 
-                 ON p.id = product_id 
+                 ON p.id = cart.product_id 
                  WHERE member_id = ?` // 使用占位符以防止 SQL 注入攻击
 
       // 3. 执行查询
