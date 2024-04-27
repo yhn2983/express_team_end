@@ -2,24 +2,25 @@ import express from 'express'
 import db from './../utils/mysql2-connect.js'
 import dayjs from 'dayjs'
 import nodemailer from 'nodemailer'
+import { z } from 'zod'
 
 const router = express.Router()
 
 router.post('/sendEmail', async (req, res) => {
   const { name, email, subject, message } = req.body
   const transporter = nodemailer.createTransport({
-    host: 'smtp.example.com',
+    host: 'moritairohadesu@gmail.com',
     port: 587,
     secure: false,
     auth: {
-      user: 'your_email@example.com',
-      pass: 'your_email_password',
+      user: 'moritairohadesu@gmail.com',
+      pass: 'test123456TEST',
     },
   })
 
   const mailOptions = {
-    from: 'your_email@example.com',
-    to: 'recipient@example.com',
+    from: 'test@example.com',
+    to: 'moritairohadesu@gmail.com',
     subject: subject,
     text: `From: ${name} (${email})\n\n${message}`,
   }
@@ -269,6 +270,37 @@ const getListData = async (req) => {
     item.created_at = dayjs(item.created_at).format('YYYYMMDD')
   })
 
+  let ob = []
+  const sql10 = `SELECT * FROM orders_barter`
+  ;[ob] = await db.query(sql10)
+
+  let coupon = []
+  const sql8 = `SELECT * FROM coupon`
+  ;[coupon] = await db.query(sql8)
+
+  const mid5 = +req.query.member_id || 0
+  let coupon_r = []
+  const sql9 = `SELECT * FROM coupon_received WHERE m_id=${mid5}`
+  ;[coupon_r] = await db.query(sql9)
+
+  let purchase_order = []
+  const sql11 = `SELECT * FROM purchase_order`
+  ;[purchase_order] = await db.query(sql11)
+
+  const mid6 = +req.query.member_id || 0
+  let coupon_list = []
+  const sql12 = `SELECT * FROM coupon_received cr JOIN coupon c ON cr.coupon_id = c.id WHERE cr.m_id=${mid6}`
+  ;[coupon_list] = await db.query(sql12)
+
+  coupon_list.forEach((item) => {
+    item.start_date = dayjs(item.start_date).format('YYYY-MM-DD')
+    item.end_date = dayjs(item.end_date).format('YYYY-MM-DD')
+    item.created_at = dayjs(item.created_at).format('YYYY-MM-DD')
+    item.used_at = item.used_at
+      ? dayjs(item.used_at).format('YYYY-MM-DD')
+      : null
+  })
+
   const cate = []
   const [cateRows] = await db.query('SELECT * FROM categories')
   // 先取得第一層的資料
@@ -469,6 +501,11 @@ const getListData = async (req) => {
     priceOrder,
     dateOrder,
     barter,
+    coupon,
+    coupon_r,
+    ob,
+    purchase_order,
+    coupon_list,
   }
 }
 
@@ -799,7 +836,7 @@ router.post('/order-barter', async (req, res) => {
   }
 
   const sql =
-    'INSERT INTO `orders_barter` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, order_date, complete_status) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, NOW(), 1)'
+    'INSERT INTO `orders_barter` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, order_date, complete_status_m1, complete_status_m2) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, NOW(), 1, 1)'
 
   try {
     let [result] = await db.query(sql, [
@@ -837,7 +874,7 @@ router.get('/order-barter/:id', async (req, res) => {
   if (!id) {
     return res.json({ success: false })
   }
-  const sql = `SELECT ob.*, obi.order_id, obi.product_id_1 p1_id, obi.product_id_2 p2_id, obi.qty_m1, obi.qty_m2, obi.cps_available_m1 cp1, obi.cps_available_m2 cp2, p1.product_photos p1_photos, p2.product_photos p2_photos, p1.product_name p1_name, p2.product_name p2_name, ab1.nickname m1_nickname, ab2.nickname m2_nickname, ab1.name m1_name, ab2.name m2_name, ab1.mobile m1_mobile, ab2.mobile m2_mobile
+  const sql = `SELECT ob.*, obi.order_id, obi.product_id_1 p1_id, obi.product_id_2 p2_id, obi.qty_m1, obi.qty_m2, obi.cps_available_m1 cp1, obi.cps_available_m2 cp2, p1.product_photos p1_photos, p2.product_photos p2_photos, p1.product_name p1_name, p2.product_name p2_name, ab1.nickname m1_nickname, ab2.nickname m2_nickname, ab1.name m1_name, ab2.name m2_name
   FROM orders_barter ob
   JOIN orders_barter_items obi ON ob.id = obi.order_id
   JOIN products p1 ON obi.product_id_1 = p1.id
@@ -855,84 +892,6 @@ router.get('/order-barter/:id', async (req, res) => {
   res.json({ success: true, data: r })
 })
 
-// 更新以物易物訂單資料
-router.put('/order-barter/:id', async (req, res) => {
-  const output = {
-    success: false,
-    postData: req.body,
-    error: '',
-    code: 0,
-  }
-  let id = +req.params.id || 0
-
-  if (id) {
-    const sqlA = 'UPDATE cart SET p_qty=?, total_price=? WHERE id=?'
-    const valuesA = [req.body.p_qty, req.body.total_price, id]
-
-    const [result] = await db.query(sqlA, valuesA)
-
-    output.success = !!(result.affectedRows && result.changedRows)
-    res.json(output)
-  } else {
-    const sqlB =
-      'UPDATE cart SET member_id=? product_id=?, p_qty=?, p_price=?, total_price=? WHERE id=?'
-    const valuesB = [
-      req.body.member_id,
-      req.body.product_id,
-      req.body.p_qty,
-      req.body.p_price,
-      req.body.total_price,
-      id,
-    ]
-    const [result] = await db.query(sqlB, valuesB)
-
-    output.success = !!(result.affectedRows && result.changedRows)
-    res.json(output)
-  }
-})
-
-//以物易物訂單資料存入SQL
-router.post('/order', async (req, res) => {
-  const output = {
-    success: false,
-    postData: req.body,
-    error: '',
-    code: 0,
-  }
-
-  const sql =
-    'INSERT INTO `orders` (id, m1_id, m2_id, shipment_fee_m1, shipment_fee_m2, amount_m1, amount_m2, payment_status_m1, payment_status_m2, shipment_status_m1, shipment_status_m2, order_date, complete_status) VALUES (?, ?, ?, 60, 60, 1, 1, 1, 1, 1, 1, NOW(), 1)'
-
-  try {
-    let [result] = await db.query(sql, [
-      req.body.id,
-      req.body.m1_id,
-      req.body.m2_id,
-    ])
-    output.success = !!result.affectedRows
-  } catch (ex) {
-    output.error = ex.toString()
-  }
-
-  const sql2 =
-    'INSERT INTO `orders_items` (order_id, product_id_1, product_id_2, qty_m1, qty_m2, cps_available_m1, cps_available_m2) VALUES (?, ?, ?, 1, 1, ?, ?)'
-
-  try {
-    let [result2] = await db.query(sql2, [
-      req.body.id,
-      req.body.p1_id,
-      req.body.p2_id,
-      req.body.cp1,
-      req.body.cp2,
-    ])
-    output.success = !!result2.affectedRows
-  } catch (ex) {
-    output.error = ex.toString()
-  }
-
-  res.json(output)
-})
-
 // 更新以物易物訂單超商資料m2
 router.put('/barter711A/:id', async (req, res) => {
   const output = {
@@ -943,9 +902,29 @@ router.put('/barter711A/:id', async (req, res) => {
   }
   let id = +req.params.id || 0
 
+  // TODO: 資料格式檢查
+  const formSchema = z.object({
+    s_name_m2: z.string().min(2, { message: '名字長度要大於等於2' }),
+    s_phone_m2: z.string().regex(/^09\d{2}-?\d{3}-?\d{3}$/, {
+      message: '請填寫正確格式的手機號碼',
+    }),
+  })
+
+  const parseResult = formSchema.safeParse(req.body)
+  if (!parseResult.success) {
+    output.issues = parseResult.error.issues
+    return res.json(output)
+  }
+
   const sql =
-    'UPDATE orders_barter SET name711_m2=?, address711_m2=? WHERE id=?'
-  const values = [req.body.name711_m2, req.body.address711_m2, id]
+    'UPDATE orders_barter SET send_name_m2=?, send_phone_m2=?, name711_m2=?, address711_m2=? WHERE id=?'
+  const values = [
+    req.body.s_name_m2,
+    req.body.s_phone_m2,
+    req.body.name711_m2,
+    req.body.address711_m2,
+    id,
+  ]
 
   const [result] = await db.query(sql, values)
 
@@ -963,9 +942,97 @@ router.put('/barter711B/:id', async (req, res) => {
   }
   let id = +req.params.id || 0
 
+  // TODO: 資料格式檢查
+  const formSchema = z.object({
+    s_name_m1: z.string().min(2, { message: '名字長度要大於等於2' }),
+    s_phone_m1: z.string().regex(/^09\d{2}-?\d{3}-?\d{3}$/, {
+      message: '請填寫正確格式的手機號碼',
+    }),
+  })
+
+  const parseResult = formSchema.safeParse(req.body)
+  if (!parseResult.success) {
+    output.issues = parseResult.error.issues
+    return res.json(output)
+  }
+
   const sql =
-    'UPDATE orders_barter SET name711_m1=?, address711_m1=? WHERE id=?'
-  const values = [req.body.name711_m1, req.body.address711_m1, id]
+    'UPDATE orders_barter SET send_name_m1=?, send_phone_m1=?, name711_m1=?, address711_m1=? WHERE id=?'
+  const values = [
+    req.body.s_name_m1,
+    req.body.s_phone_m1,
+    req.body.name711_m1,
+    req.body.address711_m1,
+    id,
+  ]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
+//領取優惠券存入SQL
+router.post('/coupon', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+
+  const sql =
+    'INSERT INTO `coupon_received` (m_id, coupon_id, created_at) VALUES (?, ?, NOW())'
+
+  try {
+    let [result] = await db.query(sql, [req.body.m_id, req.body.coupon_id])
+    output.success = !!result.affectedRows
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  res.json(output)
+})
+
+// 完成以物易物訂單 : m2
+router.put('/ob-complete/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const now = dayjs()
+  const formattedTime = now.format('YYYY-MM-DD HH:mm:ss')
+
+  const sql =
+    'UPDATE orders_barter SET complete_status_m2=?, complete_date_m2=? WHERE id=?'
+  const values = [req.body.complete_status_m2, formattedTime, id]
+
+  const [result] = await db.query(sql, values)
+
+  output.success = !!(result.affectedRows && result.changedRows)
+  res.json(output)
+})
+
+// 完成以物易物訂單 : m1
+router.put('/ob-completeA/:id', async (req, res) => {
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
+  }
+  let id = +req.params.id || 0
+
+  const now = dayjs()
+  const formattedTime = now.format('YYYY-MM-DD HH:mm:ss')
+
+  const sql =
+    'UPDATE orders_barter SET complete_status_m1=?, complete_date_m1=? WHERE id=?'
+  const values = [req.body.complete_status_m1, formattedTime, id]
 
   const [result] = await db.query(sql, values)
 
