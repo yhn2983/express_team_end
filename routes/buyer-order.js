@@ -65,7 +65,7 @@ const getOrderListData = async (req, res) => {
   //   subQuery = `(SELECT * FROM product_likes WHERE member_id=${res.locals.jwt.id}) pl`
   // }
 
- 
+
   // /*
   // if (res.locals.jwt && res.locals.jwt.id) {
   //   //如果有jwt授權
@@ -107,18 +107,18 @@ const getOrderListData = async (req, res) => {
       redirect = `?page=${totalPages}`
       return { success: false, redirect }
     }
-    const sql2 = `SELECT   o.id , o.shipment_status , o.complete_status , o.buyer_id , o. seller_id , o.total_price , o.order_date , seller_ab.nickname  AS seller_name, buyer_ab.name AS buyer_name , buyer_ab.carbon_points_got as buyer_point , p.id as p_id  , p.product_name as product_name , p.product_photos as product_photos ,orders_items.id as items_id
-     
+    const sql2 = `SELECT orders_items.item_qty item_qty, orders_items.item_price item_price, o.total_amount total_amount, o.shipment_fee shipment_fee, o.discount_cp cp, o.discount_coupon coupon, o.payment_status, o.id , o.shipment_status , o.complete_status , o.buyer_id , o. seller_id , o.total_price , o.order_date , seller_ab.nickname AS seller_name, buyer_ab.name AS buyer_name , buyer_ab.carbon_points_got as buyer_point , p.id as p_id , p.product_name as product_name , p.product_photos as product_photos,orders_items.id as items_id
+    
     FROM orders as o  
-   
-   INNER JOIN address_book  as buyer_ab
-   ON o.buyer_id=buyer_ab.id  
-   INNER JOIN address_book as seller_ab
-   ON o.seller_id= seller_ab.id  
-   INNER JOIN orders_items 
+    
+    INNER JOIN address_book  as buyer_ab
+    ON o.buyer_id=buyer_ab.id  
+    INNER JOIN address_book as seller_ab
+    ON o.seller_id= seller_ab.id  
+    INNER JOIN orders_items 
     ON orders_items.order_id =o.id  
     INNER JOIN products as p 
-     ON orders_items.product_id=p.id
+    ON orders_items.product_id=p.id
     ${whereMain} ORDER BY o.id  DESC
     LIMIT ${(page - 1) * perPage}, ${perPage}`
     ;[rows] = await db.query(sql2)
