@@ -259,10 +259,7 @@ router.get('/product-api-shop', async (req, res) => {
                  FROM cart
                  INNER JOIN products as p 
                  ON p.id = cart.product_id 
-<<<<<<< HEAD
-=======
                 
->>>>>>> 737376ab5c8faf71f41c5a874b7afa8b0e3727df
                  WHERE member_id = ?` // 使用占位符以防止 SQL 注入攻击
 
       // 3. 执行查询
