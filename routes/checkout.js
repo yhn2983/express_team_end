@@ -154,6 +154,14 @@ router.get('/api', async (req, res) => {
   res.json(data)
 })
 
+//取得優惠卷(coupon)
+router.get('/coupon', async (req, res) => {
+  let where = ' WHERE 1 '
+  const sql = ` SELECT * FROM  \`coupon_received\`   ${where} `
+  const [rows] = await db.query(sql)
+  res.json(rows)
+})
+
 //----- 新增資料
 //呈現新增表單
 // router.get('/add', async (req, res) => {
@@ -251,13 +259,26 @@ router.get('/product-api-shop', async (req, res) => {
                  FROM cart
                  INNER JOIN products as p 
                  ON p.id = cart.product_id 
+<<<<<<< HEAD
+=======
+                
+>>>>>>> 737376ab5c8faf71f41c5a874b7afa8b0e3727df
                  WHERE member_id = ?` // 使用占位符以防止 SQL 注入攻击
 
       // 3. 执行查询
       const [rows] = await db.query(sql, [reqId])
-
+      //取得優惠卷資料
+      const sqlC = ` SELECT * FROM  coupon  as cp 
+      inner join  coupon_received as cr  
+      on cr.coupon_id = cp.id
+      WHERE cr.m_id = ?`
+      const [cp] = await db.query(sqlC, [reqId])
+      //取得小炭點資料
+      const sqlt = ` SELECT * FROM  address_book   
+      WHERE id = ?`
+      const [ct] = await db.query(sqlt, [reqId])
       // 4. 返回查询结果
-      res.json({ rows })
+      res.json({ rows, cp, ct })
     }
   } catch (error) {
     console.error('Error fetching product:', error)
@@ -301,7 +322,7 @@ router.post('/add', async (req, res) => {
     console.log(lastInsertId)
 
     const sql2 =
-      'INSERT INTO `orders_items` ( `order_id`, `product_id`, `item_price`, `item_qty`, `carbon_points_available`, `after_bargin_price`, `rating`, `comments`, `evaluation_date`) VALUES (?,?,?,?,?,?,?,?,?)'
+      'INSERT INTO `orders_items` ( `order_id`, `product_id`, `item_price`, `item_qty`, `carbon_points_available`, `after_bargin_price` ) VALUES (?,?,?,?,?,?)'
 
     for (let i = 0; i < req.body.product_id.length; i++) {
       const [result2] = await db.query(sql2, [
@@ -310,10 +331,7 @@ router.post('/add', async (req, res) => {
         req.body.product_price[i],
         req.body.item_qty[i],
         req.body.carbon_points_available[i],
-        1,
-        1,
-        1,
-        1,
+        req.body.after_bargin_price,
         //   // req.body.product_id,
         //   // req.body.item_price,
 
