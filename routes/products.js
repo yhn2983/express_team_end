@@ -119,19 +119,16 @@ const getListData = async (req) => {
       \`product_price\` >= 5001
     )`
   }
-  if (searchPrice) {
-    const newpPriceStart = parseInt(priceStart)
-    const newPriceEnd = parseInt(priceEnd)
-    if (newpPriceStart) {
-      where += ` AND (
-        \`product_price\` >= ${db.escape(newpPriceStart)}
+
+  if (priceStart) {
+    where += ` AND (
+        \`product_price\` >= ${db.escape(priceStart)}
       )`
-    }
-    if (newPriceEnd) {
-      where += ` AND (
-        \`product_price\` < ${db.escape(newPriceEnd)}
+  }
+  if (priceEnd) {
+    where += ` AND (
+        \`product_price\` < ${db.escape(priceEnd)}
       )`
-    }
   }
 
   // product status search
