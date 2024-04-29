@@ -83,7 +83,6 @@ const getListData = async (req) => {
   let searchPriceC = req.query.searchPriceC || ''
   let searchPriceD = req.query.searchPriceD || ''
   let searchPriceE = req.query.searchPriceE || ''
-  let searchPrice = req.query.searchPrice || ''
   let priceStart = req.query.priceStart || ''
   let priceEnd = req.query.priceEnd || ''
   if (searchPriceA) {
@@ -152,7 +151,6 @@ const getListData = async (req) => {
   let searchDateD = req.query.searchDateD || ''
   let searchDateE = req.query.searchDateE || ''
   let searchDateF = req.query.searchDateF || ''
-  let searchDate = req.query.searchDate || ''
   let searchDateStart = req.query.searchDateStart || ''
   let searchDateEnd = req.query.searchDateEnd || ''
   if (searchDateA) {
@@ -197,17 +195,16 @@ const getListData = async (req) => {
       \`p\`.\`created_at\` <= '${dayjs('2024-12-31').format('YYYY-MM-DD')}'
     )`
   }
-  if (searchDate) {
-    if (searchDateStart) {
-      where += ` AND (
-      \`p\`.\`created_at\` >= '${dayjs(searchDateStart).format('YYYY-MM-DD')}'
-    )`
-    }
-    if (searchDateEnd) {
-      where += ` AND (
-      \`p\`.\`created_at\` <= '${dayjs(searchDateEnd).format('YYYY-MM-DD')}'
-    )`
-    }
+
+  if (searchDateStart) {
+    searchDateStart = `${searchDateStart} 00:00:00`
+    where += ` AND (\`p\`.\`created_at\` >= '${searchDateStart}'
+  )`
+  }
+  if (searchDateEnd) {
+    searchDateEnd = `${searchDateEnd} 23:59:59`
+    where += ` AND (\`p\`.\`created_at\` <= '${searchDateEnd}' 
+  )`
   }
 
   // 頁數設定
