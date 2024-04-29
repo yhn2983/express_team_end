@@ -1,7 +1,6 @@
 import express from 'express'
 import db from './../utils/mysql2-connect.js'
 import dayjs from 'dayjs'
-import nodemailer from 'nodemailer'
 import transporter from '#configs/mail.js'
 import { z } from 'zod'
 
@@ -12,7 +11,7 @@ router.post('/sendEmail', async (req, res) => {
 
   const mailText = () => `(此封信件為自動寄出，請勿直接回覆)\n
   您好，${name}先生/小姐\n
-  您的訊息：${message}
+  您的訊息：${message}\n\n
   請稍待回音，我們將於3-5個工作天內盡快回覆您，謝謝您！
     
 
@@ -59,7 +58,7 @@ const getListData = async (req) => {
   } else if (dateOrder == 'dateSortDESC') {
     orderby += `\`p\`.\`created_at\` DESC`
   } else {
-    orderby += '1'
+    orderby += 'RAND()'
   }
 
   // category search
