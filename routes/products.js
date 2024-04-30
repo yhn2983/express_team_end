@@ -654,6 +654,12 @@ router.delete('/api/:pid', async (req, res) => {
   res.json(result)
 })
 
+router.delete('/api2', async (req, res) => {
+  const sql = `DELETE FROM cart`
+  const [result] = await db.query(sql)
+  res.json(result)
+})
+
 // 收藏清單
 router.get('/like-toggle/:pid', async (req, res) => {
   const pid = +req.params.pid || 0
@@ -735,6 +741,12 @@ router.delete('/like-toggle/:pid', async (req, res) => {
   }
   const sql = `DELETE FROM products_likes WHERE product_id=?`
   const [result] = await db.query(sql, [pid])
+  res.json(result)
+})
+
+router.delete('/like-toggle2', async (req, res) => {
+  const sql = `DELETE FROM products_likes`
+  const [result] = await db.query(sql)
   res.json(result)
 })
 
