@@ -1,7 +1,6 @@
 import express from 'express'
 import db from './../utils/mysql2-connect.js'
 import dayjs from 'dayjs'
-import nodemailer from 'nodemailer'
 import transporter from '#configs/mail.js'
 import { z } from 'zod'
 
@@ -12,7 +11,7 @@ router.post('/sendEmail', async (req, res) => {
 
   const mailText = () => `(此封信件為自動寄出，請勿直接回覆)\n
   您好，${name}先生/小姐\n
-  您的訊息：${message}
+  您的訊息：${message}\n\n
   請稍待回音，我們將於3-5個工作天內盡快回覆您，謝謝您！
     
 
@@ -59,7 +58,7 @@ const getListData = async (req) => {
   } else if (dateOrder == 'dateSortDESC') {
     orderby += `\`p\`.\`created_at\` DESC`
   } else {
-    orderby += '1'
+    orderby += 'RAND()'
   }
 
   // category search
@@ -84,7 +83,6 @@ const getListData = async (req) => {
   let searchPriceC = req.query.searchPriceC || ''
   let searchPriceD = req.query.searchPriceD || ''
   let searchPriceE = req.query.searchPriceE || ''
-  let searchPrice = req.query.searchPrice || ''
   let priceStart = req.query.priceStart || ''
   let priceEnd = req.query.priceEnd || ''
   if (searchPriceA) {
@@ -120,19 +118,16 @@ const getListData = async (req) => {
       \`product_price\` >= 5001
     )`
   }
-  if (searchPrice) {
-    const newpPriceStart = parseInt(priceStart)
-    const newPriceEnd = parseInt(priceEnd)
-    if (newpPriceStart) {
-      where += ` AND (
-        \`product_price\` >= ${db.escape(newpPriceStart)}
+
+  if (priceStart) {
+    where += ` AND (
+        \`product_price\` >= ${db.escape(priceStart)}
       )`
-    }
-    if (newPriceEnd) {
-      where += ` AND (
-        \`product_price\` < ${db.escape(newPriceEnd)}
+  }
+  if (priceEnd) {
+    where += ` AND (
+        \`product_price\` < ${db.escape(priceEnd)}
       )`
-    }
   }
 
   // product status search
@@ -156,7 +151,6 @@ const getListData = async (req) => {
   let searchDateD = req.query.searchDateD || ''
   let searchDateE = req.query.searchDateE || ''
   let searchDateF = req.query.searchDateF || ''
-  let searchDate = req.query.searchDate || ''
   let searchDateStart = req.query.searchDateStart || ''
   let searchDateEnd = req.query.searchDateEnd || ''
   if (searchDateA) {
@@ -201,17 +195,16 @@ const getListData = async (req) => {
       \`p\`.\`created_at\` <= '${dayjs('2024-12-31').format('YYYY-MM-DD')}'
     )`
   }
-  if (searchDate) {
-    if (searchDateStart) {
-      where += ` AND (
-      \`p\`.\`created_at\` >= '${dayjs(searchDateStart).format('YYYY-MM-DD')}'
-    )`
-    }
-    if (searchDateEnd) {
-      where += ` AND (
-      \`p\`.\`created_at\` <= '${dayjs(searchDateEnd).format('YYYY-MM-DD')}'
-    )`
-    }
+
+  if (searchDateStart) {
+    searchDateStart = `${searchDateStart} 00:00:00`
+    where += ` AND (\`p\`.\`created_at\` >= '${searchDateStart}'
+  )`
+  }
+  if (searchDateEnd) {
+    searchDateEnd = `${searchDateEnd} 23:59:59`
+    where += ` AND (\`p\`.\`created_at\` <= '${searchDateEnd}' 
+  )`
   }
 
   // 頁數設定
@@ -661,6 +654,12 @@ router.delete('/api/:pid', async (req, res) => {
   res.json(result)
 })
 
+router.delete('/api2', async (req, res) => {
+  const sql = `DELETE FROM cart`
+  const [result] = await db.query(sql)
+  res.json(result)
+})
+
 // 收藏清單
 router.get('/like-toggle/:pid', async (req, res) => {
   const pid = +req.params.pid || 0
@@ -742,6 +741,12 @@ router.delete('/like-toggle/:pid', async (req, res) => {
   }
   const sql = `DELETE FROM products_likes WHERE product_id=?`
   const [result] = await db.query(sql, [pid])
+  res.json(result)
+})
+
+router.delete('/like-toggle2', async (req, res) => {
+  const sql = `DELETE FROM products_likes`
+  const [result] = await db.query(sql)
   res.json(result)
 })
 
