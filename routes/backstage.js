@@ -155,7 +155,7 @@ const getListData = async (req, res) => {
       redirect = `?page=${totalPages}`
       return { success: false, redirect }
     }
-    const sql2 = `SELECT * FROM products ${where} ORDER BY id DESC LIMIT ${(page - 1) * perPage}, ${perPage}`
+    const sql2 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} AND p.seller_id=2 ORDER BY id DESC LIMIT ${(page - 1) * perPage}, ${perPage}`
 
     ;[rows] = await db.query(sql2)
     console.log(sql2)

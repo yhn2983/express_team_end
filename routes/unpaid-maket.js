@@ -26,7 +26,9 @@ router.get('/orders', async (req, res) => {
 })
 
 router.get('/ordersA', async (req, res) => {
-  const [rows] = await db.query('SELECT * FROM orders WHERE complete_status=1')
+  const [rows] = await db.query(
+    'SELECT orders.*, address_book.nickname nickname, coupon.coupon_name coupon_name FROM orders JOIN address_book ON orders.buyer_id = address_book.id JOIN coupon ON orders.discount_coupon = coupon.id  WHERE seller_id=2 AND complete_status=1'
+  )
   const cate = []
   for (let item of rows) {
     if (+item.complete_status === 1) {
@@ -45,7 +47,9 @@ router.get('/ordersA', async (req, res) => {
   res.json({ success: true, data: cate })
 })
 router.get('/ordersB', async (req, res) => {
-  const [rows] = await db.query('SELECT * FROM orders WHERE complete_status=2')
+  const [rows] = await db.query(
+    'SELECT orders.*, address_book.nickname nickname, coupon.coupon_name coupon_name FROM orders JOIN address_book ON orders.buyer_id = address_book.id JOIN coupon ON orders.discount_coupon = coupon.id  WHERE seller_id=2 AND complete_status=2'
+  )
   const cate = []
   for (let item of rows) {
     if (+item.complete_status === 2) {
@@ -108,7 +112,7 @@ router.get('/', async (req, res) => {
   const page = Number(req.query.page) || 1 // 获取查询参数中的页码，默认为第1页
   const limit = 10 // 每页显示的数据条数
   const offset = (page - 1) * limit // 计算偏移量
-  cateRows = await db.query('SELECT * FROM orders') // h在這裡賦值
+  cateRows = await db.query(`SELECT * FROM orders WHERE seller_id=2`) // h在這裡賦值
 
   const firstLevelCate = []
   for (let item of cateRows) {
@@ -130,7 +134,7 @@ router.get('/', async (req, res) => {
 
   try {
     const [rows] = await db.query(
-      `SELECT * FROM orders LIMIT ${offset}, ${limit}`
+      `SELECT orders.*, address_book.nickname nickname, coupon.coupon_name coupon_name FROM orders JOIN address_book ON orders.buyer_id = address_book.id JOIN coupon ON orders.discount_coupon = coupon.id  WHERE seller_id=2 LIMIT ${offset}, ${limit}`
     )
     // 查询指定页码的数据
     // const [rows] = await db.execute('SELECT * FROM orders LIMIT ?, ?', [
