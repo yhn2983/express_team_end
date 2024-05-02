@@ -1,22 +1,10 @@
 import express from 'express'
+import db from './../utils/mysql2-connect.js'
+import { createLinePayClient } from 'line-pay-merchant'
+import { v4 as uuidv4 } from 'uuid'
+import 'dotenv/config.js'
 const router = express.Router()
 
-// 資料庫使用
-import sequelize from '#configs/db.js'
-const { Purchase_Order } = sequelize.models
-
-// 中介軟體，存取隱私會員資料用
-import authenticate from '#middlewares/authenticate.js'
-
-// line pay使用npm套件
-import { createLinePayClient } from 'line-pay-merchant'
-// 產生uuid用
-import { v4 as uuidv4 } from 'uuid'
-
-// 存取`.env`設定檔案使用
-import 'dotenv/config.js'
-
-// 定義安全的私鑰字串
 const linePayClient = createLinePayClient({
   channelId: process.env.LINE_PAY_CHANNEL_ID,
   channelSecretKey: process.env.LINE_PAY_CHANNEL_SECRET,
@@ -24,15 +12,10 @@ const linePayClient = createLinePayClient({
 })
 
 // 在資料庫建立order資料(需要會員登入才能使用)
-router.post('/create-order', authenticate, async (req, res) => {
-  // 會員id由authenticate中介軟體提供
-  const userId = req.user.id
-
-  //產生 orderId與packageId
+router.post('/create-order', async (req, res) => {
   const orderId = uuidv4()
   const packageId = uuidv4()
 
-  // 要傳送給line pay的訂單資訊
   const order = {
     orderId: orderId,
     currency: 'TWD',
@@ -47,26 +30,50 @@ router.post('/create-order', authenticate, async (req, res) => {
     options: { display: { locale: 'zh_TW' } },
   }
 
-  //console.log(order)
-
-  // 要儲存到資料庫的order資料
-  const dbOrder = {
-    id: orderId,
-    user_id: userId,
-    amount: req.body.amount,
-    status: 'pending', // 'pending' | 'paid' | 'cancel' | 'fail' | 'error'
-    order_info: JSON.stringify(order), // 要傳送給line pay的訂單資訊
+  const output = {
+    success: false,
+    postData: req.body,
+    error: '',
+    code: 0,
   }
 
-  // 儲存到資料庫
-  await Purchase_Order.create(dbOrder)
+  const status = 'pending'
 
-  // 回傳給前端的資料
+  const sql =
+    'INSERT INTO `purchase_order` (id, user_id, amount, status, order_info, created_at, updated_at) VALUES ( ?, ?, ?, ?, ?, NOW(), NOW())'
+  const values = [
+    orderId,
+    req.body.user_id,
+    req.body.amount,
+    status,
+    JSON.stringify(order),
+  ]
+
+  try {
+    let [result] = await db.query(sql, values)
+    output.success = !!result.affectedRows
+
+    console.log(result)
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
+  const sql2 = 'UPDATE orders SET po=? WHERE id=?'
+  const value2 = [orderId, req.body.order_id]
+
+  try {
+    let [result] = await db.query(sql2, value2)
+    output.success = !!(result.affectedRows && result.changedRows)
+
+    console.log(result)
+  } catch (ex) {
+    output.error = ex.toString()
+  }
+
   res.json({ status: 'success', data: { order } })
 })
 
-// 重新導向到line-pay，進行交易(純導向不回應前端)
-// 資料格式參考 https://enylin.github.io/line-pay-merchant/api-reference/request.html#example
+// 導向到line-pay，進行交易(純導向不回應前端)
 router.get('/reserve', async (req, res) => {
   if (!req.query.orderId) {
     return res.json({ status: 'error', message: 'order id不存在' })
@@ -74,33 +81,30 @@ router.get('/reserve', async (req, res) => {
 
   const orderId = req.query.orderId
 
-  // 設定重新導向與失敗導向的網址
   const redirectUrls = {
     confirmUrl: process.env.REACT_REDIRECT_CONFIRM_URL,
     cancelUrl: process.env.REACT_REDIRECT_CANCEL_URL,
   }
 
-  // 從資料庫取得訂單資料
-  const orderRecord = await Purchase_Order.findByPk(orderId, {
-    raw: true, // 只需要資料表中資料
-  })
+  const sql = `SELECT * FROM purchase_order WHERE id=?`
+  const orderRecord = await db.query(sql, [orderId])
 
-  // const orderRecord = await findOne('orders', { order_id: orderId })
+  console.log(orderRecord)
 
-  // order_info記錄要向line pay要求的訂單json
-  const order = JSON.parse(orderRecord.order_info)
+  const firstObject = orderRecord[0][0]
+  const orderInfo = firstObject.order_info
+  const order = JSON.parse(orderInfo)
 
-  //const order = cache.get(orderId)
   console.log(`獲得訂單資料，內容如下：`)
   console.log(order)
 
   try {
-    // 向line pay傳送的訂單資料
     const linePayResponse = await linePayClient.request.send({
       body: { ...order, redirectUrls },
     })
 
-    // 深拷貝一份order資料
+    console.log(linePayResponse)
+
     const reservation = JSON.parse(JSON.stringify(order))
 
     reservation.returnCode = linePayResponse.body.returnCode
@@ -112,22 +116,24 @@ router.get('/reserve', async (req, res) => {
     console.log(`預計付款資料(Reservation)已建立。資料如下:`)
     console.log(reservation)
 
-    // 在db儲存reservation資料
-    const result = await Purchase_Order.update(
-      {
-        reservation: JSON.stringify(reservation),
-        transaction_id: reservation.transactionId,
-      },
-      {
-        where: {
-          id: orderId,
-        },
-      }
-    )
+    const output = {
+      success: false,
+      postData: req.body,
+      error: '',
+      code: 0,
+    }
 
-    // console.log(result)
+    const sql2 =
+      'UPDATE purchase_order SET reservation=?, transaction_id=? WHERE id=?'
+    const values = [
+      JSON.stringify(reservation),
+      reservation.transactionId,
+      orderId,
+    ]
 
-    // 導向到付款頁面， line pay回應後會帶有info.paymentUrl.web為付款網址
+    const [result] = await db.query(sql2, values)
+    output.success = !!(result.affectedRows && result.changedRows)
+
     res.redirect(linePayResponse.body.info.paymentUrl.web)
   } catch (e) {
     console.log('error', e)
@@ -135,29 +141,18 @@ router.get('/reserve', async (req, res) => {
 })
 
 // 向Line Pay確認交易結果
-// 格式參考: https://enylin.github.io/line-pay-merchant/api-reference/confirm.html#example
 router.get('/confirm', async (req, res) => {
-  // 網址上需要有transactionId
   const transactionId = req.query.transactionId
+  console.log(transactionId)
 
-  // 從資料庫取得交易資料
-  const dbOrder = await Purchase_Order.findOne({
-    where: { transaction_id: transactionId },
-    raw: true, // 只需要資料表中資料
-  })
+  const sql = `SELECT * FROM purchase_order WHERE transaction_id=?`
+  const [rows] = await db.query(sql, [transactionId])
+  const dbOrder = rows[0]
+  console.log('dbOrder:', dbOrder)
 
-  console.log(dbOrder)
-
-  // 交易資料
-  const transaction = JSON.parse(dbOrder.reservation)
-
-  console.log(transaction)
-
-  // 交易金額
-  const amount = transaction.amount
+  const amount = dbOrder.amount
 
   try {
-    // 最後確認交易
     const linePayResponse = await linePayClient.confirm.send({
       transactionId: transactionId,
       body: {
@@ -166,33 +161,38 @@ router.get('/confirm', async (req, res) => {
       },
     })
 
-    // linePayResponse.body回傳的資料
     console.log(linePayResponse)
 
-    //transaction.confirmBody = linePayResponse.body
-
-    // status: 'pending' | 'paid' | 'cancel' | 'fail' | 'error'
     let status = 'paid'
 
     if (linePayResponse.body.returnCode !== '0000') {
       status = 'fail'
     }
 
-    // 更新資料庫的訂單狀態
-    const result = await Purchase_Order.update(
-      {
-        status,
-        return_code: linePayResponse.body.returnCode,
-        confirm: JSON.stringify(linePayResponse.body),
-      },
-      {
-        where: {
-          id: dbOrder.id,
-        },
-      }
-    )
+    const output = {
+      success: false,
+      postData: req.body,
+      error: '',
+      code: 0,
+    }
 
+    const sql2 =
+      'UPDATE purchase_order SET status=?, confirm=?, return_code=? WHERE id=?'
+    const values = [
+      status,
+      JSON.stringify(linePayResponse.body),
+      linePayResponse.body.returnCode,
+      dbOrder.id,
+    ]
+    const [result] = await db.query(sql2, values)
+    output.success = !!(result.affectedRows && result.changedRows)
     console.log(result)
+
+    const sql3 = 'UPDATE orders SET payment_status=? WHERE po=?'
+    const value3 = [2, dbOrder.id]
+    const [result2] = await db.query(sql3, value3)
+    output.success = !!result2.affectedRows
+    console.log(result2)
 
     return res.json({ status: 'success', data: linePayResponse.body })
   } catch (error) {
@@ -209,15 +209,6 @@ router.get('/check-transaction', async (req, res) => {
       transactionId: transactionId,
       params: {},
     })
-
-    // 範例:
-    // {
-    //   "body": {
-    //     "returnCode": "0000",
-    //     "returnMessage": "reserved transaction."
-    //   },
-    //   "comments": {}
-    // }
 
     res.json(linePayResponse.body)
   } catch (e) {

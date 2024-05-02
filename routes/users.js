@@ -10,6 +10,9 @@ import { getIdParam } from '#db-helpers/db-tool.js'
 // 資料庫使用
 import sequelize from '#configs/db.js'
 const { Member } = sequelize.models
+const { StoreLike } = sequelize.models
+// 不建立模型直接查詢產品資料表
+import { QueryTypes } from 'sequelize'
 
 // 驗証加密密碼字串用
 import { compareHash } from '#db-helpers/password-hash.js'
@@ -69,6 +72,24 @@ router.get('/:id', authenticate, async function (req, res) {
   delete user.password
 
   return res.json({ status: 'success', data: { user } })
+})
+
+// GET - 得到單筆資料不是該會員的(注意，有動態參數時要寫在GET區段最後面)
+router.get('/other/:id', async function (req, res, next) {
+  try {
+    // 轉為數字
+    const id = getIdParam(req)
+
+    const otherUser = await Member.findByPk(id, {
+      raw: true, // 只需要資料表中資料
+      attributes: ['id', 'nickname', 'photo'], // 只回傳 id, nickname, 和 photo
+    })
+
+    return res.json({ status: 'success', data: { otherUser } })
+  } catch (error) {
+    // 如果 getIdParam 拋出錯誤，我們將錯誤傳遞給下一個中間件
+    next(error)
+  }
 })
 
 // POST - 新增會員資料
@@ -348,6 +369,107 @@ router.post(
     })
   }
 )
+
+// 已完成
+// 取得賣場商品資料
+router.get('/products/:id', async (req, res) => {
+  const id = req.params.id
+
+  try {
+    const products = await sequelize.query(
+      'SELECT * FROM products WHERE seller_id = :id',
+      {
+        replacements: { id: id },
+        type: QueryTypes.SELECT,
+      }
+    )
+
+    res.json(products)
+  } catch (error) {
+    res.status(500).json({ error: error.toString() })
+  }
+})
+
+router.get('/getStoreLike/:id', async (req, res) => {
+  const id = +req.params.id
+  try {
+    const storeLikes = await StoreLike.findAll({
+      where: { user_id: id },
+    })
+
+    const data = storeLikes.map((storeLike) => storeLike.dataValues)
+    console.log(data)
+
+    res.json({ status: 'success', data })
+  } catch (error) {
+    res.status(500).json({ error: error.toString() })
+  }
+})
+
+router.post('/postStoreLike', async (req, res) => {
+  const { userId, storeId, storeLike } = req.body
+  console.log(req.body)
+  try {
+    // 檢查是否已經存在一個追蹤
+    let follow = await StoreLike.findOne({
+      where: {
+        user_id: userId,
+        store_id: storeId,
+      },
+    })
+
+    if (follow) {
+      // 如果存在，則更新追蹤狀態
+      follow.store_like = storeLike
+      await follow.save()
+    } else {
+      // 如果不存在，則創建一個新的追蹤
+      follow = await StoreLike.create({
+        user_id: userId,
+        store_id: storeId,
+        store_like: storeLike,
+      })
+    }
+
+    res.json({ status: 'success', data: follow })
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.toString() })
+  }
+})
+
+router.post('/getStoreLikeList', async (req, res) => {
+  const { user_id } = req.body
+
+  try {
+    const storeLikes = await sequelize.query(
+      `SELECT 
+          store_like.store_id, 
+          address_book.nickname, 
+          address_book.photo
+        FROM 
+          store_like
+        JOIN 
+          address_book ON store_like.store_id = address_book.id
+        WHERE 
+          store_like.user_id = :userId AND
+          store_like.store_like = 2`,
+      {
+        replacements: { userId: user_id },
+        type: QueryTypes.SELECT,
+      }
+    )
+
+    const result = storeLikes.map((storeLike) => ({
+      store_id: storeLike.store_id,
+      nickname: storeLike.nickname,
+      photo: storeLike.photo,
+    }))
+
+    res.json({ status: 'success', data: result })
+  } catch (error) {
+    res.json({ status: 'error', message: error.message })
+  }
+})
 /*--------------------------*/
 
 export default router

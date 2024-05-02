@@ -1,10 +1,22 @@
 import express from 'express'
 import prodRouter from './routes/products.js'
+import shipRouter from './routes/shipment.js'
+import linepayRouter from './routes/line-pay.js'
 import session from 'express-session'
 import mysql_session from 'express-mysql-session'
-//import dayjs from 'dayjs'
 import db from './utils/mysql2-connect.js'
 import cors from 'cors'
+import boRouter from './routes/buyer-order.js'
+import bargainRouter from './routes/bargain.js'
+import checkoutRouter from './routes/checkout.js'
+import cookieParser from 'cookie-parser'
+import evaRouter from './routes/evaluation.js'
+import BAckstage from './routes/backstage.js'
+import unpaidRouter from './routes/unpaid-maket.js'
+import ListRouter from './routes/list-maket.js'
+import ListpostRouter from './routes/list-post.js'
+import ListeditRouter from './routes/list-maket-edit.js'
+import BackstageManagerRouter from './routes/backstage-manager.js'
 
 // *** 將session資料存入MySQL
 const MysqlStore = mysql_session(session)
@@ -53,10 +65,23 @@ app.use((req, res, next) => {
 // ***設定路由(routes), 路由一定要/開頭, 否則是沒有效果的
 // Raye:
 app.use('/products', prodRouter)
+app.use('/shipment', shipRouter)
+app.use('/line-pay', linepayRouter)
 
 // Chen:
+app.use('/backstage', BAckstage)
+app.use('/unpaid-maket', unpaidRouter)
+app.use('/list-maket', ListRouter)
+app.use('/list-post', ListpostRouter)
+app.use('/list-maket-edit', ListeditRouter)
+app.use('/backstage-manager', BackstageManagerRouter)
 
 // Kai:
+app.use(cookieParser())
+app.use('/buyer-order', boRouter)
+app.use('/checkout', checkoutRouter)
+app.use('/evaluation', evaRouter)
+app.use('/bargain', bargainRouter)
 
 // ***靜態內容***
 app.use(express.static('public'))
