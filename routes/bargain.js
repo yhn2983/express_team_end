@@ -89,9 +89,9 @@ router.delete('/buyer/:id', async (req, res) => {
 // 获取议价请求详情
 router.get('/get/:id', async (req, res) => {
   const id = req.params.id
-  const sql = ` SELECT *, bar.id  FROM  bargain as bar  
+  const sql = ` SELECT *, bar.id, ab.nickname nickname  FROM  bargain as bar  
     INNER JOIN products as pro
-    ON pro.id = bar.product_id
+    ON pro.id = bar.product_id JOIN address_book ab ON bar.buyer_id = ab.id
     WHERE bar.id = ${id}
   `
   const [rows] = await db.query(sql)

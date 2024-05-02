@@ -25,16 +25,16 @@ router.get('/get/:eid', async (req, res) => {
   }
   try {
     const sql = `SELECT orders_items.evaluation_date , orders_items.id , products.product_name , 
-  products.product_photos , 
-  seller_ab.name AS seller_name 
-   FROM orders 
- INNER JOIN orders_items 
- ON orders_items.order_id =orders.id 
- INNER JOIN address_book as seller_ab
- ON orders.seller_id = seller_ab.id 
- INNER JOIN products 
- ON orders_items.product_id =products.id 
- WHERE orders_items.id=?`
+  products.product_photos , products.id pid,
+  seller_ab.name AS seller_name, seller_ab.id sid, seller_ab.nickname nickname
+  FROM orders 
+  INNER JOIN orders_items 
+  ON orders_items.order_id =orders.id 
+  INNER JOIN address_book as seller_ab
+  ON orders.seller_id = seller_ab.id 
+  INNER JOIN products 
+  ON orders_items.product_id =products.id 
+  WHERE orders_items.id=?`
     const [rows] = await db.query(sql, [eid])
     if (!rows.length) {
       return res.json({ success: false })

@@ -34,10 +34,10 @@ router.get('/edit/:id', async (req, res) => {
   }
   const r = rows[0]
   const createdDate = dayjs(r.created_at)
-  const editedDate = dayjs(r.edited_at)
+  const editedDate = dayjs(r.edit_at)
 
   r.created_at = createdDate.isValid() ? createdDate.format('YYYY-MM-DD') : ''
-  r.edited_at = editedDate.isValid() ? editedDate.format('YYYY-MM-DD') : ''
+  r.edit_at = editedDate.isValid() ? editedDate.format('YYYY-MM-DD') : ''
 
   res.render('products/edit', r)
 })
@@ -53,12 +53,12 @@ router.put('/edit/:id', async (req, res) => {
   let id = +req.params.id || 0
 
   let createdDate = dayjs(req.body.created_at, 'YYYY-MM-DD', true) // dayjs 物件
-  let editedDate = dayjs(req.body.edited_at, 'YYYY-MM-DD', true) // dayjs 物件
+  let editedDate = dayjs(req.body.edit_at, 'YYYY-MM-DD', true) // dayjs 物件
   // 置換處理過的值
   req.body.created_at = createdDate.isValid()
     ? createdDate.format('YYYY-MM-DD')
     : null
-  req.body.edited_at = editedDate.isValid()
+  req.body.edit_at = editedDate.isValid()
     ? editedDate.format('YYYY-MM-DD')
     : null
 
@@ -100,11 +100,13 @@ const getListData = async (req, res) => {
     // 如果是合法的日期格式, 就轉換為日期的字串, 否則設定為空值
     created_at = created_at.isValid() ? created_at.format('YYYY-MM-DD') : null
   }
-  let edited_at = req.query.edited_at || null
-  if (edited_at) {
-    edited_at = dayjs(edited_at, 'YYYY-MM-DD', true) // dayjs 物件
+  let created_at2 = req.query.created_at2 || null
+  if (created_at2) {
+    created_at2 = dayjs(created_at2, 'YYYY-MM-DD', true) // dayjs 物件
     // 如果是合法的日期格式, 就轉換為日期的字串, 否則設定為空值
-    edited_at = edited_at.isValid() ? edited_at.format('YYYY-MM-DD') : null
+    created_at2 = created_at2.isValid()
+      ? created_at2.format('YYYY-MM-DD')
+      : null
   }
 
   let where = ' WHERE 1 '
@@ -115,15 +117,15 @@ const getListData = async (req, res) => {
     )
     `
   }
-  if (created_at && edited_at) {
-    // 將 created_at 和 edited_at 條件合併為一個條件，同時篩選這兩個欄位
-    where += ` AND (\`created_at\` >= ${db.escape(created_at)} AND \`edited_at\` <= ${db.escape(edited_at)}) `
+  if (created_at && created_at2) {
+    // 將 created_at條件合併為一個條件，同時篩選這兩個欄位
+    where += ` AND (\`p\`.\`created_at\` >= ${db.escape(created_at)} AND \`p\`.\`created_at\` <= ${db.escape(created_at2)}) `
   } else if (created_at) {
     // 只篩選 created_at 欄位
-    where += ` AND \`created_at\` >= ${db.escape(created_at)} `
-  } else if (edited_at) {
-    // 只篩選 edited_at 欄位
-    where += ` AND \`edited_at\` <= ${db.escape(edited_at)} `
+    where += ` AND \`p\`.\`created_at\` >= ${db.escape(created_at)} `
+  } else if (created_at2) {
+    // 只篩選 created_at2 欄位
+    where += ` AND \`p\`.\`created_at\` <= ${db.escape(created_at2)} `
   }
 
   if (minValue) {
@@ -155,7 +157,7 @@ const getListData = async (req, res) => {
       redirect = `?page=${totalPages}`
       return { success: false, redirect }
     }
-    const sql2 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} AND p.seller_id=2 ORDER BY id DESC LIMIT ${(page - 1) * perPage}, ${perPage}`
+    const sql2 = `SELECT sub.category_name s, main.category_name m, main.carbon_points_available mc, sub.carbon_points_available sc, p.*, ab.nickname sellerName, ab.photo sellerPic FROM categories sub LEFT JOIN categories main ON main.id = sub.parent_id RIGHT JOIN products p ON p.category_id = sub.id JOIN address_book ab ON p.seller_id = ab.id ${where} AND p.seller_id=2 ORDER BY p.id DESC LIMIT ${(page - 1) * perPage}, ${perPage}`
 
     ;[rows] = await db.query(sql2)
     console.log(sql2)
@@ -168,8 +170,8 @@ const getListData = async (req, res) => {
 
   rows.forEach((item) => {
     // 把 birthday 欄位的值轉換成 "YYYY-MM-DD" 格式的字串
-    const d = dayjs(item.edited_at)
-    item.edited_at = d.isValid() ? d.format('YYYY-MM-DD') : ''
+    const d = dayjs(item.edit_at)
+    item.edit_at = d.isValid() ? d.format('YYYY-MM-DD') : ''
   })
 
   return {
