@@ -119,7 +119,7 @@ router.put('/:id/respond', async (req, res) => {
 router.get('/checkout/:id', async (req, res) => {
   const id = req.params.id
   const sql = `SELECT 
-  bargain.id , pro.product_name , pro.product_price , bargain.after_bargin_price ,pro.seller_id  , bargain.available_cp , bargain.p_qty
+  bargain.id , product_id , pro.product_name , pro.product_price , bargain.after_bargin_price ,pro.seller_id  , bargain.available_cp , bargain.p_qty
   FROM bargain 
   INNER JOIN products AS pro 
   ON pro.id = bargain.product_id
