@@ -8,6 +8,9 @@ routes/ws-chat.js
 routes/ws-draw.js
 views
 
+#data
+data/firebase-google
+
 # dependencies
 /node_modules
 /.pnp
